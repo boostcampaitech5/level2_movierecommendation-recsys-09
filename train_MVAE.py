@@ -2,14 +2,11 @@ import argparse
 import collections
 import torch
 import numpy as np
-import data_loader.data_loaders as module_data
-import model.loss as module_loss
-import model.metric as module_metric
-import model.model as module_arch
-from parse_config import ConfigParser
-from trainer import Trainer
-from utils import prepare_device
+import sys
+import os
 
+#sys.path.append('/opt/ml/level2_dkt-recsys-09/DKT')
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 # fix random seeds for reproducibility
 SEED = 123
