@@ -47,8 +47,8 @@ def cars_preprocess(data_dir):
     valid_df = pd.merge(valid_df, year_df, on=['item'], how='left') 
 
     for column in cate_att:
-        train_df = indexing(train_df, column)
-        valid_df = indexing(valid_df, column)
+        train_df = indexing(rating_df, train_df, column)
+        valid_df = indexing(rating_df, valid_df, column)
         
     train_df.to_csv(os.path.join(data_dir, "context_train_data.csv"), index=False)
     valid_df.to_csv(os.path.join(data_dir, "context_valid_data.csv"), index=False)
@@ -97,7 +97,7 @@ def negative_sampling(rating_df, train_df, num_neg):
         else:
             user_neg_dfs = pd.concat([user_neg_dfs, i_user_neg_df], axis = 0, sort=False)
             
-    return pd.concat([rating_df, user_neg_dfs], axis=0, sort=False)
+    return pd.concat([train_df, user_neg_dfs], axis=0, sort=False)
 
 
 def indexing_wo_0(df, column):
@@ -109,8 +109,8 @@ def indexing_wo_0(df, column):
     return df
 
 
-def indexing(df, column):
-    attribute = sorted(list(set(df[column])))
+def indexing(rating_df, df, column):
+    attribute = sorted(list(set(rating_df[column])))
     att2idx = {v:i for i,v in enumerate(attribute)}
     
     df[column] = df[column].map(lambda x: att2idx[x])
@@ -129,10 +129,43 @@ def unindexing(rating_df, df, column):
     
     
 def cars_test_preprocess(data_dir):
-    data = pd.read_csv(os.path.join(data_dir, "train_ratings.csv"))
+    rating_df = pd.read_csv(os.path.join(data_dir, "train_ratings.csv"))
+    rating_df.drop(['time'], axis=1, inplace=True)
     
-    user = pd.DataFrame({"user": data.user.unique()})
-    item = pd.DataFrame({"item": data.item.unique()})
+    merged_df = pd.read_csv(os.path.join(data_dir, "my_ease_350_100.csv"))
+
+    multi_att = ['director', 'writer', 'genre']
+    cate_att = ['user', 'item']
+    
+    for column in multi_att:
+        # data 불러오기
+        df = pd.read_csv(os.path.join(data_dir, column +"s.tsv"), sep='\t')
+    
+        # indexing 하기
+        df = indexing_wo_0(df, column)
+    
+        # item별 attribute list를 df에 저장
+        df = df.groupby('item')[column].apply(list)
+        
+        merged_df = pd.merge(merged_df, df, on=['item'], how="left")
+    
+    merged_df = merged_df.fillna("[]")
+
+    year_df = preprocess_year_data(data_dir)
+    merged_df = pd.merge(merged_df, year_df, on=['item'], how='left')     
+
+    for column in cate_att:
+        merged_df = indexing(rating_df, merged_df, column)
+        
+    merged_df.to_csv(os.path.join(data_dir, "context_test_data.csv"), index=False)
+    
+    
+def cars_total_test_preprocess(data_dir):
+    rating_df = pd.read_csv(os.path.join(data_dir, "train_ratings.csv"))
+    rating_df.drop(['time'], axis=1, inplace=True)
+    
+    user = pd.DataFrame({"user": rating_df.user.unique()})
+    item = pd.DataFrame({"item": rating_df.item.unique()})
     
     merged_df = user.merge(item, how='cross').sort_values(['user', 'item']).reset_index(drop=True)
     
@@ -157,6 +190,6 @@ def cars_test_preprocess(data_dir):
     merged_df = pd.merge(merged_df, year_df, on=['item'], how='left')     
 
     for column in cate_att:
-        merged_df = indexing(merged_df, column)
+        merged_df = indexing(rating_df, merged_df, column)
         
-    merged_df.to_csv(os.path.join(data_dir, "context_test_data.csv"), index=False)
+    merged_df.to_csv(os.path.join(data_dir, "context_test_data_total.csv"), index=False)
