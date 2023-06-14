@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import os
 
 
 def item_encoding(df):
@@ -61,11 +62,17 @@ def make_inter_mat(data_file, *datasets):
             for item in items:
                 inter_mat[uid][item] = 1
         mat_list.append(inter_mat)
-
+   
     # 파일 저장 경로
-    #for i, mat in enumerate(mat_list):
-    #np.savetxt(file_path, mat_list[0])
-    np.save(data_file+ 'train_mat.npy', mat_list[0])
+    train_mat_file = data_file + 'train_mat.npy'
+    item_mat_file = data_file + 'item_mat.npy'
+
+    # 같은 파일을 한번 더 저장할 필요는 없으므로
+    if not os.path.exists(train_mat_file):
+        np.save(train_mat_file, mat_list[0])
+    if not os.path.exists(item_mat_file): 
+        np.save(item_mat_file, mat_list[2])
+    
     return mat_list
 
 def negative_sampling(args, *datasets):

@@ -1,7 +1,6 @@
 import argparse
 import collections
 import torch
-from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import data_loader.data_loaders as module_data
 import model.loss as module_loss
@@ -9,10 +8,9 @@ import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer, AutoRecTrainer
-from utils import prepare_device, generate_submission_file, EarlyStopping
+from utils import prepare_device, generate_submission_file
 from tqdm import tqdm
 import wandb
-import os
 
 #from data_loader.data_loaders import AutoRecDataset
 
@@ -25,7 +23,10 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 def main(config):
-    #wandb.login()
+    # wandb init
+    wandb.login()
+    wandb.init(project=config['name'], entity="ffm", name=config['name'])
+    
     logger = config.get_logger('train')
 
 
@@ -54,33 +55,13 @@ def main(config):
     optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
     lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
     
-    #args.train_matrix = train_mat
     if config['name'] == "AutoRec":
         trainer = AutoRecTrainer(
             model, data_loader, valid_data_loader, None, submission_data_loader, config)
-        
-        checkpoint = config["wandb_name"] + ".pt"
-        early_stopping = EarlyStopping(os.path.join(config["output_dir"], checkpoint), patience=config["patience"], verbose=True)
-        
-        for epoch in tqdm(range(config["trainer"]["epochs"])):
-            trainer.train(epoch)
-
-            scores, _ = trainer.valid(epoch)
-            
-            # 3. wandb log
-            """wandb.log({"recall@5" : scores[0],
-                    "ndcg@5" : scores[1],
-                    "recall@10" : scores[2],
-                    "ndcg@10" : scores[3]})"""
-
-            early_stopping(np.array([scores[2]]), trainer.model)
-            if early_stopping.early_stop:
-                print("Early stopping")
-                break
-
-        # print("---------------Change to test_rating_matrix!-------------------")
-        # load the best model
-        """trainer.args.train_matrix = item_mat
+        trainer.train_and_validate()
+       
+        """
+        trainer.args.train_matrix = item_mat
         trainer.model.load_state_dict(torch.load(args.checkpoint_path))
         preds = trainer.submission(0)
         print(preds)

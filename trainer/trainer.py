@@ -1,12 +1,14 @@
 import numpy as np
+import os
 import torch
 from torchvision.utils import make_grid
 from base import BaseTrainer
-from utils import inf_loop, MetricTracker
+from utils import inf_loop, MetricTracker, EarlyStopping
 
 import torch.nn as nn
-import tqdm
+from tqdm import tqdm
 from torch.optim import Adam
+import wandb
 
 from model.metric import ndcg_k, recall_at_k
 
@@ -238,6 +240,11 @@ class AutoRecTrainer(Trainer_new):
             args,
         )
         self.train_matrix = np.load('/opt/ml/input/data/train_mat.npy')
+        self.epochs = args["trainer"]["epochs"]
+        self.wandb_name = args["wandb_name"]
+        self.patience = args["patience"]
+        self.output_dir = args['output_dir']
+        
         self.args = args['lr_scheduler']
         self.loss_fn = nn.MSELoss().to(self.device)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -252,7 +259,7 @@ class AutoRecTrainer(Trainer_new):
 
         # Setting the tqdm progress bar
 
-        rec_data_iter = tqdm.tqdm(
+        rec_data_iter = tqdm(
             enumerate(dataloader),
             desc="Recommendation EP_%s:%d" % (mode, epoch),
             total=len(dataloader),
@@ -335,3 +342,24 @@ class AutoRecTrainer(Trainer_new):
                 return pred_list
             else:
                 return self.get_full_sort_score(epoch, answer_list, pred_list)
+            
+    def train_and_validate(self):
+        checkpoint = self.wandb_name + ".pt"
+        self.early_stopping = EarlyStopping(os.path.join(self.output_dir, checkpoint), patience=self.patience, verbose=True)
+        for epoch in tqdm(range(self.epochs)):
+            self.train(epoch)
+
+            scores, _ = self.valid(epoch)
+
+            # wandb log
+            wandb.log({
+                "recall@5": scores[0],
+                "ndcg@5": scores[1],
+                "recall@10": scores[2],
+                "ndcg@10": scores[3]
+            })
+
+            self.early_stopping(np.array([scores[2]]), self.model)
+            if self.early_stopping.early_stop:
+                print("Early stopping")
+                break
