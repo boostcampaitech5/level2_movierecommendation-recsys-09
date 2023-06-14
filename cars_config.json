@@ -65,7 +65,7 @@
     "test": {
         "data_dir": "/opt/ml/input/data/train/",
         "batch_size": 6807,
-        "model_dir": "/opt/ml/level2_movierecommendation-recsys-09/saved/models/NFM/0612_161900/model_best.pth",
+        "model_dir": "/opt/ml/level2_movierecommendation-recsys-09/saved/models/NFM/0613_125253/model_best.pth",
         "submission_dir": "submission/"
     }
 }
