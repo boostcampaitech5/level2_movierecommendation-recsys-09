@@ -46,11 +46,6 @@ class AutoRecModel(nn.Module):
         self.out_activation = args["out_activation"]
         self.num_layers = args["num_layers"]
         self.dropout_rate = args["dropout_rate"]
-
-        """self.input_dim = 6807 #train_mat.shape[1]
-        self.emb_dim = 64
-        self.num_layers = 1
-        self.dropout_rate = 0.05"""
         
         # define layers
         encoder_modules = list()

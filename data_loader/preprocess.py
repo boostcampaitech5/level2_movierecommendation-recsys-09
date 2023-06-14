@@ -74,37 +74,3 @@ def make_inter_mat(data_file, *datasets):
         np.save(item_mat_file, mat_list[2])
     
     return mat_list
-
-def negative_sampling(args, *datasets):
-    df = pd.read_csv(args['data_dir'] +  'train/train_ratings.csv')
-    df = item_encoding(df)
-
-    users_list = df['user_idx'].unique()
-    items_list = df['item_idx'].unique()
-
-    train_set, valid_set, item_set = datasets
-    neg_sample_set = {}
-
-    for uid in tqdm(users_list):
-        if args["neg_sampling_method"] == 'n_neg':
-            neg_set_size = args["n_negs"] * len(train_set[uid])
-        else:
-            neg_set_size = args["neg_sample_num"]
-
-        neg_sample_set[uid] = list(set(items_list) - set(item_set[uid]))
-        u_neg_set = np.random.choice(neg_sample_set[uid], size=neg_set_size, replace=False)  
-        train_set[uid] = list(set(train_set[uid]).union(set(u_neg_set)))
-        item_set[uid] = list(set(train_set[uid]).union(set(valid_set[uid])))
-
-    """# train_set 저장
-    with open(args['data_dir']+'train_set.txt', 'w') as file:
-        for uid, items in train_set.items():
-            file.write(f"{uid}: {','.join(str(item) for item in items)}\n")
-
-    # item_set 저장
-    with open(args['data_dir']+'item_set.txt', 'w') as file:
-        for uid, items in item_set.items():
-            file.write(f"{uid}: {','.join(str(item) for item in items)}\n")"""
-
-
-    return train_set, item_set

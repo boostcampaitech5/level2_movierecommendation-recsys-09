@@ -3,11 +3,7 @@ from base import BaseDataLoader
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from data_loader.preprocess import(
-    train_valid_split,
-    make_inter_mat,
-    negative_sampling,
-)
+from data_loader.preprocess import train_valid_split, make_inter_mat
 
 
 class MnistDataLoader(BaseDataLoader):
@@ -52,22 +48,18 @@ class AutoRecDataLoader(DataLoader):
         self.train_set, self.valid_set, self.item_set = train_valid_split(args)
         self.train_mat, self.valid_mat, self.item_mat = make_inter_mat(args['data_dir'], self.train_set, self.valid_set, self.item_set)
 
-        self.train_neg_set, self.item_neg_set = negative_sampling(args, self.train_set, self.valid_set, self.item_set)
-
-        self.train_neg_mat, self.item_neg_mat = make_inter_mat(args['data_dir'], self.train_neg_set, self.item_neg_set)
-        
-        self.train_dataset = AutoRecDataset(args, self.item_neg_mat, self.valid_mat)
+        self.train_dataset = AutoRecDataset(args, self.item_mat, self.valid_mat)
         self.args = args
 
       
         super().__init__(self.train_dataset, batch_size = args['batch_size'], shuffle = True, pin_memory = True)
 
     def split_validation(self):
-        self.eval_dataset = AutoRecDataset(self.args, self.train_neg_mat, self.valid_mat)
+        self.eval_dataset = AutoRecDataset(self.args, self.train_mat, self.valid_mat)
 
         return DataLoader(self.eval_dataset, self.batch_size, shuffle = False, pin_memory = True)
         
     def submission(self):
-        self.submission_dataset = AutoRecDataset(self.args, self.item_neg_mat, self.valid_mat)
+        self.submission_dataset = AutoRecDataset(self.args, self.item_mat, self.valid_mat)
         return DataLoader(self.submission_dataset, self.batch_size, shuffle = False, pin_memory = True)
     

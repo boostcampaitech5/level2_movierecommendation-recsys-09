@@ -8,12 +8,8 @@ import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer, AutoRecTrainer
-from utils import prepare_device, generate_submission_file
-from tqdm import tqdm
+from utils import prepare_device
 import wandb
-
-#from data_loader.data_loaders import AutoRecDataset
-
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -33,8 +29,7 @@ def main(config):
     # setup data_loader instances
     data_loader = config.init_obj('data_loader', module_data)
     valid_data_loader = data_loader.split_validation()
-    submission_data_loader = data_loader.submission()
-    
+
 
     # build model architecture, then print to console
     model = config.init_obj('arch', module_arch)
@@ -57,15 +52,9 @@ def main(config):
     
     if config['name'] == "AutoRec":
         trainer = AutoRecTrainer(
-            model, data_loader, valid_data_loader, None, submission_data_loader, config)
+            model, data_loader, valid_data_loader, None, None, config)
         trainer.train_and_validate()
        
-        """
-        trainer.args.train_matrix = item_mat
-        trainer.model.load_state_dict(torch.load(args.checkpoint_path))
-        preds = trainer.submission(0)
-        print(preds)
-        generate_submission_file(args.data_file, preds, args.model_name)"""
     else:
         trainer = Trainer(model, criterion, metrics, optimizer,
                         config=config,
@@ -79,7 +68,7 @@ def main(config):
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default='cofig/config.json', type=str,
+    args.add_argument('-c', '--config', default='config/config_AutoRec.json', type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')

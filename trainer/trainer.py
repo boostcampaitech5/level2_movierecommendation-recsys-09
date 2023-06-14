@@ -310,9 +310,6 @@ class AutoRecTrainer(Trainer_new):
                     user_ids, inter_mat, answers = batch
 
                     rating_pred = self.model(inter_mat)
-                    # rating_pred = rating_pred.softmax(dim = 1)
-                    # print(rating_pred)
-                    # break
 
                     rating_pred = rating_pred.cpu().data.numpy().copy()
                     batch_user_index = user_ids.cpu().numpy()
