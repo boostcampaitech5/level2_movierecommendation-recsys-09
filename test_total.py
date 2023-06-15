@@ -33,8 +33,6 @@ def process_chunk(chunk, user_group_df, model):
     items = data[ind, 1]
     user_rec_df = pd.DataFrame({'user':[user]*len(items), 'item':items})
     
-    print(user_rec_df)
-    
     return user_rec_df
 
 
@@ -61,9 +59,7 @@ def main(config):
         chunksize=6807
         pred_dfs = p.starmap(process_chunk, [[chunk, user_group_df, model] for i, chunk in tqdm(enumerate(pd.read_csv(data_path, chunksize=chunksize)))])
 
-    recommend_df = pd.concat(pred_dfs)
-    
-    print('pred done!')
+    recommend_df = pd.concat(pred_dfs).sort_values(['user'])
     
     rating_df = pd.read_csv(os.path.join(config['test']['data_dir'], "train_ratings.csv"))
     for column in ['user', 'item']:
