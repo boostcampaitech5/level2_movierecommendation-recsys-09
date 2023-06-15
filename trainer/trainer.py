@@ -108,3 +108,14 @@ class Trainer(BaseTrainer):
             current = batch_idx
             total = self.len_epoch
         return base.format(current, total, 100.0 * current / total)
+
+class Trainer_ML():
+    def __init__(self, model, config, data_loader, valid_data_loader):
+        self.model = model
+        self.config = config
+        self.data_loader = data_loader
+        self.valid_data_loader = valid_data_loader
+
+    def train(self):
+        self.model.train(self.data_loader.train_dataset, self.valid_data_loader)
+        self.model.save_model_pkl(self.config["trainer"]["save_dir"]+self.config["trainer"]["save_model_path"])
