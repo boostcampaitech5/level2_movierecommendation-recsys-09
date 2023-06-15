@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from torchvision.utils import make_grid
+import wandb
 from base import BaseTrainer
 from utils import inf_loop, MetricTracker
 
@@ -44,7 +44,7 @@ class Trainer(BaseTrainer):
 
             self.optimizer.zero_grad()
             output = self.model(data)
-            loss = self.criterion(output, target)
+            loss = self.criterion(self.model, output, data, target)
             loss.backward()
             self.optimizer.step()
 
@@ -58,7 +58,7 @@ class Trainer(BaseTrainer):
                     epoch,
                     self._progress(batch_idx),
                     loss.item()))
-                self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
+                #self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
             if batch_idx == self.len_epoch:
                 break
@@ -67,6 +67,9 @@ class Trainer(BaseTrainer):
         if self.do_validation:
             val_log = self._valid_epoch(epoch)
             log.update(**{'val_'+k : v for k, v in val_log.items()})
+            wandb.log({
+                'val_loss': val_log['loss']
+            })
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
@@ -86,17 +89,17 @@ class Trainer(BaseTrainer):
                 data, target = data.to(self.device), target.to(self.device)
 
                 output = self.model(data)
-                loss = self.criterion(output, target)
+                loss = self.criterion(self.model, output, data, target)
 
                 self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
                 self.valid_metrics.update('loss', loss.item())
                 for met in self.metric_ftns:
                     self.valid_metrics.update(met.__name__, met(output, target))
-                self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
+                #self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
         # add histogram of model parameters to the tensorboard
-        for name, p in self.model.named_parameters():
-            self.writer.add_histogram(name, p, bins='auto')
+        # for name, p in self.model.named_parameters():
+        #     self.writer.add_histogram(name, p, bins='auto')
         return self.valid_metrics.result()
 
     def _progress(self, batch_idx):
