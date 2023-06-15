@@ -107,6 +107,8 @@ saved/
 datasets/
 output/
 catboost_info/
+wandb/
+
 
 # editor, os cache directory
 .vscode/
