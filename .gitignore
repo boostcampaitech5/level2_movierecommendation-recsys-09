@@ -105,6 +105,8 @@ data/
 input/
 saved/
 datasets/
+output/
+catboost_info/
 
 # editor, os cache directory
 .vscode/
