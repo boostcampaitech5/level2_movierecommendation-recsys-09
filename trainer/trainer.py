@@ -240,6 +240,7 @@ class AutoRecTrainer(Trainer_new):
             args,
         )
         self.train_matrix = np.load('/opt/ml/input/data/train_mat.npy')
+        self.wandb = args["wandb"]
         self.epochs = args["trainer"]["epochs"]
         self.wandb_name = args["wandb_name"]
         self.patience = args["patience"]
@@ -347,14 +348,14 @@ class AutoRecTrainer(Trainer_new):
             self.train(epoch)
 
             scores, _ = self.valid(epoch)
-
             # wandb log
-            wandb.log({
-                "recall@5": scores[0],
-                "ndcg@5": scores[1],
-                "recall@10": scores[2],
-                "ndcg@10": scores[3]
-            })
+            if self.wandb:
+                wandb.log({
+                    "recall@5": scores[0],
+                    "ndcg@5": scores[1],
+                    "recall@10": scores[2],
+                    "ndcg@10": scores[3]
+                })
 
             self.early_stopping(np.array([scores[2]]), self.model)
             if self.early_stopping.early_stop:
