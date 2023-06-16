@@ -7,9 +7,10 @@ import model.loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import Trainer_ML
-from utils import prepare_device
-
+from trainer import Trainer, AutoRecTrainer, Trainer_ML
+from utils import prepare_device, wandb_sweep
+import wandb
+import functools
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -19,36 +20,61 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 def main(config):
+    # wandb init
+    if config['wandb']:
+        wandb.login()
+        wandb.init(project=config['name'], entity="ffm", name=config['name'])
+    
+    # wandb sweep
+    if config['wandb_sweep']:
+        config = wandb_sweep(config['name'], config) 
+    
     logger = config.get_logger('train')
-
+    
     # setup data_loader instances
     data_loader = config.init_obj('data_loader', module_data)
-    valid_data_loader = data_loader.get_validation()
+    valid_data_loader = data_loader.split_validation()
 
     # build model architecture, then print to console
     model = config.init_obj('arch', module_arch)
     logger.info(model)
 
-    # # prepare for (multi-device) GPU training
-    # device, device_ids = prepare_device(config['n_gpu'])
-    # model = model.to(device)
-    # if len(device_ids) > 1:
-    #     model = torch.nn.DataParallel(model, device_ids=device_ids)
+    # prepare for (multi-device) GPU training
+    if config['name'] != 'Catboost':
+        device, device_ids = prepare_device(config['n_gpu'])
+        model = model.to(device)
+        if len(device_ids) > 1:
+            model = torch.nn.DataParallel(model, device_ids=device_ids)
 
-    # # get function handles of loss and metrics
-    # criterion = getattr(module_loss, config['loss'])
-    # metrics = [getattr(module_metric, met) for met in config['metrics']]
+        # get function handles of loss and metrics
+        criterion = getattr(module_loss, config['loss'])
+        metrics = [getattr(module_metric, met) for met in config['metrics']]
 
-    # # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
-    # trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    # optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
-    # lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
+        # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
+        trainable_params = filter(lambda p: p.requires_grad, model.parameters())
+        optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
+        lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
-    trainer = Trainer_ML(model, config=config,
+    # prepare trainer and start train
+    if config['name'] == "AutoRec_eval":
+        trainer = AutoRecTrainer(
+            model, data_loader, valid_data_loader, None, None, config)
+        trainer.train_and_validate()
+     
+    else:
+        if config['name'] == "Catboost":
+            trainer = Trainer_ML(model, config=config,
                         data_loader=data_loader,
                         valid_data_loader=valid_data_loader)
+        else:
+            trainer = Trainer(model, criterion, metrics, optimizer,
+                            config=config,
+                            device=device,
+                            data_loader=data_loader,
+                            valid_data_loader=valid_data_loader,
+                            lr_scheduler=lr_scheduler)
 
-    trainer.train()
+        trainer.train()
 
 
 if __name__ == '__main__':
@@ -66,5 +92,14 @@ if __name__ == '__main__':
         CustomArgs(['--lr', '--learning_rate'], type=float, target='optimizer;args;lr'),
         CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size')
     ]
+    
     config = ConfigParser.from_args(args, options)
-    main(config)
+
+    if config["wandb_sweep"]:
+        sweep_id = wandb.sweep(
+            sweep=config['sweep_configuration'],
+            project=config['name']
+        )
+        wandb.agent(sweep_id=sweep_id, function=functools.partial(main, config), count=1, entity='ffm')
+    else: 
+        main(config)

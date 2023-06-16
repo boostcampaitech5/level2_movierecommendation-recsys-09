@@ -1,5 +1,7 @@
 {
     "name": "Catboost",
+    "wandb": false,
+    "wandb_sweep": false,
 
     "arch": {
         "type": "CatBoostModel",
