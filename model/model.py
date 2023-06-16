@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from base import BaseModel
-
+import pickle
 
 class MnistModel(BaseModel):
     def __init__(self, num_classes=10):
@@ -133,3 +133,9 @@ class BERT4Rec(nn.Module):
             seqs, attn_dist = block(seqs, mask)
         out = self.out(seqs)
         return out
+
+    def load_state_dict(self, model_path):
+        with open(model_path, 'rb') as f:
+                model = pickle.load(f)
+        self.model = model
+        return self.model

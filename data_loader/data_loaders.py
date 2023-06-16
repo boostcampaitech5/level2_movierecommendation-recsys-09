@@ -4,6 +4,8 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
+from data_loader.preprocess import BERT4Rec_preprocess
+
 
 class MnistDataLoader(BaseDataLoader):
     """
@@ -63,7 +65,16 @@ class SeqDataset(Dataset):
         return torch.LongTensor(tokens), torch.LongTensor(labels)
     
 class BERT4RecDataLoader(DataLoader):
-    def __init__(self, user_train, num_user, num_item, max_len, mask_prob, batch_size):
-        self.seq_dataset = SeqDataset(user_train, num_user, num_item, max_len, mask_prob)
+    def __init__(self, **args):
+        self.args = args
+        self.user_train, self.user_valid = BERT4Rec_preprocess(args)
         
-        super().__init__(self.seq_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+        self.seq_dataset = SeqDataset(self.user_train, args['num_user'], args['num_item'], args['max_len'], args['mask_prob'])
+        
+        super().__init__(self.seq_dataset, batch_size=args['batch_size'], shuffle=True, pin_memory=True)
+        
+    def split_validation(self):
+        return self.user_valid
+    
+    def return_data(self):
+        return self.user_train, self.user_valid

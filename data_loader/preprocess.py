@@ -4,7 +4,8 @@ from tqdm import tqdm
 import os
 from collections import defaultdict
 
-def BERT4Rec_preprocess(df):
+def BERT4Rec_preprocess(args):
+    df = pd.read_csv(args['data_dir'] + 'train/train_ratings.csv')
     item_ids = df['item'].unique() #영화 리스트
     user_ids = df['user'].unique() #사용자 리스트
 

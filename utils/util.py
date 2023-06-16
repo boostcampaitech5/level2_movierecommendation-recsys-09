@@ -1,6 +1,7 @@
 import json
 import torch
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from itertools import repeat
 from collections import OrderedDict
@@ -65,3 +66,14 @@ class MetricTracker:
 
     def result(self):
         return dict(self._data.average)
+
+
+def idx2(args):
+    df = pd.read_csv(args['data_dir'] + 'train/train_ratings.csv')
+    
+    item_ids = df['item'].unique() #영화 리스트
+    user_ids = df['user'].unique() #사용자 리스트
+    
+    idx2item = pd.Series(data= item_ids, index=np.arange(len(item_ids))+ 1)
+    idx2user = pd.Series(data = user_ids)
+    return idx2user, idx2item
