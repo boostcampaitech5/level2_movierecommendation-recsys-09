@@ -8,8 +8,9 @@ import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer, AutoRecTrainer
-from utils import prepare_device
+from utils import prepare_device, wandb_sweep
 import wandb
+import functools
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -20,16 +21,19 @@ np.random.seed(SEED)
 
 def main(config):
     # wandb init
-    wandb.login()
-    wandb.init(project=config['name'], entity="ffm", name=config['name'])
+    if config['wandb']:
+        wandb.login()
+        wandb.init(project=config['name'], entity="ffm", name=config['name'])
+    
+    # wandb sweep
+    if config['wandb_sweep']:
+        config = wandb_sweep(config['name'], config) 
     
     logger = config.get_logger('train')
-
-
+    
     # setup data_loader instances
     data_loader = config.init_obj('data_loader', module_data)
     valid_data_loader = data_loader.split_validation()
-
 
     # build model architecture, then print to console
     model = config.init_obj('arch', module_arch)
@@ -49,8 +53,8 @@ def main(config):
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
     lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
-    
-    if config['name'] == "AutoRec":
+
+    if config['name'] == "AutoRec_eval":
         trainer = AutoRecTrainer(
             model, data_loader, valid_data_loader, None, None, config)
         trainer.train_and_validate()
@@ -81,5 +85,14 @@ if __name__ == '__main__':
         CustomArgs(['--lr', '--learning_rate'], type=float, target='optimizer;args;lr'),
         CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size')
     ]
+    
     config = ConfigParser.from_args(args, options)
-    main(config)
+
+    if config["wandb_sweep"]:
+        sweep_id = wandb.sweep(
+            sweep=config['sweep_configuration'],
+            project=config['name']
+        )
+        wandb.agent(sweep_id=sweep_id, function=functools.partial(main, config), count=1, entity='ffm')
+    else: 
+        main(config)
