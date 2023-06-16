@@ -3,17 +3,29 @@
     "n_gpu": 1,
 
     "arch": {
-        "type": "MnistModel",
-        "args": {}
+        "type": "BERT4Rec",
+        "args": {
+            "hidden_units" : 128,
+            "num_heads" : 2,
+            "num_layers" :2,
+            "dropout_rate" : 0.5,
+            "device" : "cuda",
+            "num_user" : 31360,
+            "num_item" : 6807,
+            "max_len" : 50
+        }
     },
     "data_loader": {
-        "type": "MnistDataLoader",
+        "type": "BERT4RecDataLoader",
         "args":{
-            "data_dir": "data/",
+            "data_dir": "/opt/ml/input/data/",
+            "num_user" : 31360,
+            "num_item" : 6807,
+            "max_len" : 50,
+            "mask_prob" : 0.15,
             "batch_size": 128,
             "shuffle": true,
-            "validation_split": 0.1,
-            "num_workers": 2
+            "num_workers": 1
         }
     },
     "optimizer": {
@@ -24,7 +36,7 @@
             "amsgrad": true
         }
     },
-    "loss": "nll_loss",
+    "loss": "CE_loss",
     "metrics": [
         "accuracy", "top_k_acc"
     ],
@@ -36,9 +48,10 @@
         }
     },
     "trainer": {
-        "epochs": 100,
+        "epochs": 200,
 
-        "save_dir": "saved/",
+        "save_dir": "/opt/ml/input/saved/BERT4Rec",
+        "model_path": "model.pkl",
         "save_period": 1,
         "verbosity": 2,
         
@@ -46,5 +59,9 @@
         "early_stop": 10,
 
         "tensorboard": true
+    },
+    "test": {
+        "model_dir": "/opt/ml/input/saved/BERT4Recmodel.pkl",
+        "output_dir": "/opt/ml/input/output/BERT4Rec_submission_1.csv"
     }
 }
