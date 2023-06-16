@@ -1,7 +1,9 @@
 {
-    "name": "AutoRec",
+    "name": "AutoRec_eval",
     "n_gpu": 1,
-
+    "wandb": true,
+    "wandb_name" : "AutoRec_eval",
+    "wandb_sweep": true,
     "arch": {
         "type": "AutoRecModel",
         "args": {
@@ -65,7 +67,7 @@
         "monitor": "min val_loss",
         "early_stop": 10,
 
-        "tensorboard": true
+        "tensorboard": false
     },
     "patience": 10,
     "test": {
@@ -75,8 +77,19 @@
         "sample_submission_dir": "~/input/data/sample_submission.csv",
         "batch_size": 128
     },
-    "wandb_name": "AutoRec",
     "output_dir": "output/",
-    "checkpoint_path": ""
+    "checkpoint_path": "",
+    "sweep_configuration": {
+        "method": "random",
+        "name": "sweep",
+        "metric": {
+            "goal": "maximize", 
+            "name": "recall@10"
+            },
+        "parameters": {
+            "batch_size": {"values": [64, 128, 256]},
+            "lr": {"max": 0.1, "min": 0.0001}
+        }
+    }
 
 }
