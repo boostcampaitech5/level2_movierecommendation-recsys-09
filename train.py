@@ -3,7 +3,6 @@ import collections
 import torch
 import numpy as np
 import wandb
-import sweep_config
 import data_loader.data_loaders as module_data
 import model.loss as module_loss
 import model.metric as module_metric
@@ -45,11 +44,11 @@ def _get_by_path(tree, keys):
 
 def main(config):
 
-    wandb.init(project=config['name'], entity = "ffm", config=sweep_config.default)
+    wandb.init(project=config['name'], entity = "ffm", config=config['default'])
     
     modification = wandb.config
     update_config(config, modification)
-
+    
     logger = config.get_logger('train')
 
     # setup data_loader instances
@@ -104,7 +103,7 @@ if __name__ == '__main__':
     config = ConfigParser.from_args(args, options)
 
     sweep_id = wandb.sweep(
-        sweep=sweep_config.sweep_configuration,
+        sweep=config['sweep_configuration'],
         entity="ffm",
         project=config['name']
     )
