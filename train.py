@@ -7,9 +7,8 @@ import model.loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import Trainer
+from trainer import Trainer, BERT4RecTrainer
 from utils import prepare_device
-
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -24,7 +23,7 @@ def main(config):
     # setup data_loader instances
     data_loader = config.init_obj('data_loader', module_data)
     valid_data_loader = data_loader.split_validation()
-
+    
     # build model architecture, then print to console
     model = config.init_obj('arch', module_arch)
     logger.info(model)
@@ -44,20 +43,26 @@ def main(config):
     optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
     lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
-    trainer = Trainer(model, criterion, metrics, optimizer,
-                      config=config,
-                      device=device,
-                      data_loader=data_loader,
-                      valid_data_loader=valid_data_loader,
-                      lr_scheduler=lr_scheduler)
+    if config['name'] == 'BERT4Rec':
+        trainer = BERT4RecTrainer(model, config, data_loader, criterion, optimizer, lr_scheduler, device)
+        trainer.train()
+        
+        
+    else :
+        trainer = Trainer(model, criterion, metrics, optimizer,
+                        config=config,
+                        device=device,
+                        data_loader=data_loader,
+                        valid_data_loader=valid_data_loader,
+                        lr_scheduler=lr_scheduler)
 
-    trainer.train()
+        trainer.train()
 
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default=None, type=str,
-                      help='config file path (default: None)')
+    args.add_argument('-c', '--config', default='config/config_BERT4Rec.json', type=str,
+                      help='config file path (default: BERT4Rec)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,

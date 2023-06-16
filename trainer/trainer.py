@@ -2,8 +2,10 @@ import numpy as np
 import torch
 from torchvision.utils import make_grid
 from base import BaseTrainer
-from utils import inf_loop, MetricTracker
+from utils import inf_loop, idx2, MetricTracker
+from tqdm import tqdm
 
+import pickle
 
 class Trainer(BaseTrainer):
     """
@@ -108,3 +110,65 @@ class Trainer(BaseTrainer):
             current = batch_idx
             total = self.len_epoch
         return base.format(current, total, 100.0 * current / total)
+
+
+class BERT4RecTrainer():
+    def __init__(self, model, config, data_loader, criterion, optimizer, lr_scheduler, device):
+        self.model = model
+        self.config = config["trainer"]
+        self.config_test = config["data_loader"]["args"]
+        self.data_loader = data_loader
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
+        self.device = device
+        self.idx2user, self.idx2item = idx2(config["data_loader"]["args"])
+    
+    def save_model_pkl(self, model_path):
+        with open(model_path, 'wb') as f:
+            pickle.dump(self.model, f)
+            
+            
+    def train(self):
+        for epoch in range(1, self.config["epochs"] + 1) :
+            tbar = tqdm(self.data_loader)
+            for step, (log_seqs, labels) in enumerate(tbar):
+                logits = self.model(log_seqs)
+        
+                # size matching
+                logits = logits.view(-1, logits.size(-1))
+                labels = labels.view(-1).to(self.device)
+                
+                self.optimizer.zero_grad()
+                loss = self.criterion(logits, labels)
+                loss.backward()
+                self.optimizer.step()
+                
+                tbar.set_description(f'Epoch: {epoch:3d}| Step: {step:3d}| Train loss: {loss:.5f}')
+                
+        self.save_model_pkl(self.config["save_dir"] + self.config["model_path"])
+        
+    def test(self, user_train, user_valid):
+        users = range(0, self.config_test["num_user"]) # 모든 user의 인덱스
+
+        result = []
+
+        for u in users:
+            seq = (user_train[u] + [self.config_test["num_item"] + 1])[-self.config_test["max_len"]:] # num_time + 1: mask index 즉, 마지막 값을 예측하도록 함
+            rated = set(user_train[u] + user_valid[u] ) #이미 본 영화 인덱스
+
+            with torch.no_grad():
+                predictions = - self.model(np.array([seq]))
+                predictions = predictions[0][-1].argsort()
+                
+                idx = 0
+                i = 0
+                while i < 10:
+                    item = predictions[idx].item()
+                    if item not in rated:
+                        result.append((self.idx2user[u], self.idx2item[item]))
+                        i += 1
+                    idx += 1
+                    
+        return result
+                    
