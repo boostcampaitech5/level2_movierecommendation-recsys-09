@@ -16,6 +16,8 @@ from pathlib import Path
 from itertools import repeat
 from collections import OrderedDict
 
+import wandb
+
 
 def ensure_dir(dirname):
     dirname = Path(dirname)
@@ -159,5 +161,12 @@ def generate_submission_file(data_file, preds, model_name):
     pd.DataFrame(result, columns=["user", "item"]).to_csv(
         f"output/{model_name}_submission.csv", index=False
     )
+
+def wandb_sweep(model_name, config):
+    if model_name == 'AutoRec':
+        for k, v in wandb.config.items():
+            config['trainer'][k] = v
+
+    return config
 
 
