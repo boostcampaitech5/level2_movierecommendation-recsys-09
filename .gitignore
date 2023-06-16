@@ -106,8 +106,10 @@ input/
 saved/
 datasets/
 wandb/
+output/
 
 # editor, os cache directory
 .vscode/
 .idea/
 __MACOSX/
+.flake8

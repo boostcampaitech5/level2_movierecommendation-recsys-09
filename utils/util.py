@@ -1,9 +1,22 @@
 import json
-import torch
+import math
+import os
+import random
+
+import numpy as np
 import pandas as pd
+from typing import Union, Tuple, List
+from tqdm import tqdm
+import scipy
+
+import torch
+from scipy.sparse import csr_matrix
+
 from pathlib import Path
 from itertools import repeat
 from collections import OrderedDict
+
+import wandb
 
 
 def ensure_dir(dirname):
@@ -65,3 +78,95 @@ class MetricTracker:
 
     def result(self):
         return dict(self._data.average)
+
+
+def neg_sample(item_set, item_size):
+    item = random.randint(1, item_size - 1)
+    while item in item_set:
+        item = random.randint(1, item_size - 1)
+    return item
+
+
+class EarlyStopping:
+    """Early stops the training if validation loss doesn't improve after a given patience."""
+
+    def __init__(self, checkpoint_path, patience=7, verbose=False, delta=0):
+        """
+        Args:
+            patience (int): How long to wait after last time validation loss improved.
+                            Default: 7
+            verbose (bool): If True, prints a message for each validation loss improvement.
+                            Default: False
+            delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+                            Default: 0
+        """
+        self.checkpoint_path = checkpoint_path
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.delta = delta
+
+    def compare(self, score):
+        for i in range(len(score)):
+
+            if score[i] > self.best_score[i] + self.delta:
+                return False
+        return True
+
+    def __call__(self, score, model):
+
+        if self.best_score is None:
+            self.best_score = score
+            self.score_min = np.array([0] * len(score))
+            self.save_checkpoint(score, model)
+        elif self.compare(score):
+            self.counter += 1
+            print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.save_checkpoint(score, model)
+            self.counter = 0
+
+    def save_checkpoint(self, score, model):
+        """Saves model when the performance is better."""
+        if self.verbose:
+            print(f"Better performance. Saving model ...")
+        torch.save(model.state_dict(), self.checkpoint_path)
+        self.score_min = score
+
+
+
+def generate_submission_file(data_file, preds, model_name):
+
+    rating_df = pd.read_csv(data_file)
+    users = rating_df["user"].unique()
+    item_ids = rating_df['item'].unique()
+    
+    if model_name in ['SASRec', 'BERT4Rec']:  
+        idx2item = pd.Series(data=item_ids, index=np.arange(len(item_ids))+1)  # item idx -> item id
+    else:
+        idx2item = pd.Series(data=item_ids, index=np.arange(len(item_ids)))
+    
+
+    result = []
+
+    for index, items in enumerate(tqdm(preds)):
+        for item in items:
+            result.append((users[index], idx2item[item]))
+
+    pd.DataFrame(result, columns=["user", "item"]).to_csv(
+        f"output/{model_name}_submission.csv", index=False
+    )
+
+def wandb_sweep(model_name, config):
+    if model_name == 'AutoRec':
+        for k, v in wandb.config.items():
+            config['trainer'][k] = v
+
+    return config
+
+
