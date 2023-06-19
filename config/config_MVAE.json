@@ -13,7 +13,7 @@
         }
     },
     "data_loader": {
-        "type": "CARSDataLoader",
+        "type": "MultiVAEDataLoader",
         "args":{
             "data_dir": "/opt/ml/input/data/train/",
             "train_data" : "train_ratings.csv",

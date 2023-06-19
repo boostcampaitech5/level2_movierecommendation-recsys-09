@@ -267,7 +267,7 @@ class MultiVAEValidDataset(Dataset):
         return self.train_input_data[idx, :], self.valid_input_data[idx,:]
     
 
-class CARSDataLoader(DataLoader):
+class MultiVAEDataLoader(DataLoader):
     def __init__(self, **args):
         self.train_dataset = MultiVAEDataset()
         
