@@ -76,7 +76,7 @@
         "data_dir": "/opt/ml/input/data/train/",
         "batch_size": 6807,
         "model_dir": "/opt/ml/input/level2_movierecommendation-recsys-09/train",
-        "save" : "Multi_VAE.pt",
+        "save" : "output/Multi_VAE.pt",
         "submission_dir": "/opt/ml/input/output/"
     },
     "sweep_configuration": {

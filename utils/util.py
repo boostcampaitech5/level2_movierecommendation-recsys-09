@@ -215,7 +215,7 @@ def submission_multi_vae(config, model, device):
             result.append((id2profile[user], id2show[i]))
 # config['test']['submission_dir'] + 
     pd.DataFrame(result, columns=["user", "item"]).to_csv( 
-        "submission/" + config['model_name'] + "4" +".csv", index=False
+        "output/" + config['model_name']  + ".csv", index=False
     )
 
 

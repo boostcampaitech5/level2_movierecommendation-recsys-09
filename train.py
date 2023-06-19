@@ -7,7 +7,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
-from data_loader.data_loaders_MVAE import MultiVAEDataset, MultiVAEValidDataset
+from data_loader.data_loaders import MultiVAEDataset, MultiVAEValidDataset
 import torch
 from torch.utils.data import DataLoader
 import model.metric as module_metric
@@ -16,13 +16,13 @@ from model.model_MVAE import MultiVAE
 import torch.optim as optim
 import model.model as module_arch
 from utils import prepare_device, wandb_sweep
-from utils.util_MVAE import Recall_at_k_batch, submission_multi_vae
+from utils.util import Recall_at_k_batch, submission_multi_vae
 import wandb
 from time import time
 from trainer import Trainer, AutoRecTrainer, Trainer_ML, MVAE_Trainer
 
 import model.loss as module_loss
-import data_loader.data_loaders_MVAE as module_data
+import data_loader.data_loaders as module_data
 os.environ['wandb mode'] = 'offline'
 
 # fix random seeds for reproducibility
@@ -35,9 +35,10 @@ import functools
 
 def main(config):
 
-    global device
-    # device = torch.device("cuda" if config['arch']['args']['device'] == "cuda" else "cpu")
-    device = torch.device("cpu")
+    
+    #global device
+    device = torch.device("cuda" if config['arch']['args']['device'] == "cuda" else "cpu")
+    #device = torch.device("cpu")
 
         # wandb init
     if config['wandb']:
