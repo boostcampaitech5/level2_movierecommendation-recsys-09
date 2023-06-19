@@ -1,0 +1,95 @@
+{
+    "name": "AutoRec_eval",
+    "n_gpu": 1,
+    "wandb": true,
+    "wandb_name" : "AutoRec_eval",
+    "wandb_sweep": true,
+    "arch": {
+        "type": "AutoRecModel",
+        "args": {
+            "hidden_size": 64,
+            "hidden_activation": "sigmoid",
+            "out_activation": "none",
+            "num_layers": 1,
+            "initiaalizer_range": 0.02,
+            "dropout_rate": 0.05
+        }
+    },
+    "data_loader": {
+        "type": "AutoRecDataLoader",
+        "args":{
+            "data_dir": "/opt/ml/input/data/",
+            "batch_size": 256,
+            "neg_sampling_method": "n_neg",
+            "n_negs": 1,
+            "neg_sample_num": 50
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args":{
+            "lr": 0.001,
+            "weight_decay": 0,
+            "amsgrad": true
+        }
+    },
+    "loss": "nll_loss",
+    "metrics": [
+        "accuracy", "top_k_acc", "precision_at_k", "recall_at_k", "idcg_k", "ndcg_k"
+    ],
+    "lr_scheduler": {
+        "type": "StepLR",
+        "args": {
+            "step_size": 50,
+            "gamma": 0.1
+        },
+        "scheduler_factor": 0.1,
+        "scheduler_eps": 1e-09,
+        "scheduler_patience": 5,
+        "gpu_id": 0
+    },
+    "trainer": {
+        "epochs": 200,
+        "lr": 0.001,
+        "batch_size": 256,
+        "patience": 10,
+        "no_cuda": false,
+        "long_freq": 1,
+        "seed": 42,
+        "weight_decay": 0.0,
+        "adam_beta1": 0.9,
+        "adam_beta2": 0.999,
+        "momentum": 0.9,
+        "save_dir": "saved/",
+        "save_period": 1,
+        "verbosity": 2,
+        
+        "monitor": "min val_loss",
+        "early_stop": 10,
+
+        "tensorboard": false
+    },
+    "patience": 10,
+    "test": {
+        "data_dir": "/opt/ml/input/data/eval/sample_submission.csv",
+        "model_dir": "/opt/ml/input/level2_dkt-recsys-09/DKT/saved/models/HybridModel/0531_121848/model_best0.pth",
+        "submission_dir": "~/level2_dkt-recsys-09/DKT/submission/UltraGCN_HM_aug_lstm.csv",
+        "sample_submission_dir": "~/input/data/sample_submission.csv",
+        "batch_size": 128
+    },
+    "output_dir": "output/",
+    "checkpoint_path": "",
+    "sweep_configuration": {
+        "method": "random",
+        "name": "sweep",
+        "metric": {
+            "goal": "maximize", 
+            "name": "recall@10"
+            },
+        "parameters": {
+            "batch_size": {"values": [64, 128, 256]},
+            "lr": {"max": 0.1, "min": 0.0001}
+        }
+    }
+
+}

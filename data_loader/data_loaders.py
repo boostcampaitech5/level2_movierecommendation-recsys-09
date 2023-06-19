@@ -11,6 +11,8 @@ from data_loader.preprocess import train_valid_split, make_inter_mat
 
 from time import time
 from scipy import sparse
+
+
 # fix random seeds for reproducibility
 SEED = 123
 torch.manual_seed(SEED)
@@ -280,9 +282,3 @@ class MultiVAEDataLoader(DataLoader):
         self.valid_dataset = MultiVAEValidDataset(train_dataset = self.train_dataset)
 
         return DataLoader(self.valid_dataset, batch_size=self.args['valid_batch_size'], drop_last=False, pin_memory=True, shuffle=False)
-        
-    """def submission(self):
-        self.submission_dataset = AutoRecDataset(self.args, self.item_mat, self.valid_mat)
-        return DataLoader(self.submission_dataset, self.batch_size, shuffle = False, pin_memory = True)"""
-
-

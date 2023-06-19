@@ -10,10 +10,10 @@ from tqdm import tqdm
 from torch.optim import Adam
 import wandb
 from time import time
-
 from model.metric import ndcg_k, recall_at_k
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
 
 class Trainer(BaseTrainer):
     """
@@ -376,7 +376,7 @@ class Trainer_ML():
         self.model.train(self.data_loader.train_dataset, self.valid_data_loader)
         self.model.save_model_pkl(self.config["trainer"]["save_dir"]+self.config["trainer"]["save_model_path"])
 
-
+        
 class MVAE_Trainer():
     def __init__(self, model, criterion, config, data_loader, valid_data_loader, optimizer):
         self.model = model

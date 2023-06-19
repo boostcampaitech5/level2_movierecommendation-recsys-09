@@ -17,8 +17,11 @@ from itertools import repeat
 from collections import OrderedDict
 
 import wandb
+
 from scipy import sparse
 import bottleneck as bn
+
+
 def ensure_dir(dirname):
     dirname = Path(dirname)
     if not dirname.is_dir():
@@ -78,6 +81,7 @@ class MetricTracker:
 
     def result(self):
         return dict(self._data.average)
+
 
 def neg_sample(item_set, item_size):
     item = random.randint(1, item_size - 1)
@@ -160,6 +164,7 @@ def generate_submission_file(data_file, preds, model_name):
     )
 
 
+
 def numerize(tp, profile2id, show2id):
     uid = tp['user'].apply(lambda x: profile2id[x])
     sid = tp['item'].apply(lambda x: show2id[x])
@@ -221,7 +226,9 @@ def submission_multi_vae(config, model, device):
 
 def wandb_sweep(model_name, config):
     if model_name == 'MVAE':
+
+def wandb_sweep(model_name, config):
+    if model_name == 'AutoRec':
         for k, v in wandb.config.items():
             config['trainer'][k] = v
-
     return config

@@ -18,10 +18,11 @@ from utils.util import Recall_at_k_batch, submission_multi_vae
 import wandb
 from time import time
 from trainer import Trainer, AutoRecTrainer, Trainer_ML, MVAE_Trainer
-
 import model.loss as module_loss
 import data_loader.data_loaders as module_data
 os.environ['wandb mode'] = 'offline'
+import functools
+
 
 # fix random seeds for reproducibility
 SEED = 1111
@@ -32,19 +33,17 @@ np.random.seed(SEED)
 import functools
 
 def main(config):
-
-
-        # wandb init
+    # wandb init
     if config['wandb']:
         wandb.login()
         wandb.init(project=config['name'], entity="ffm", name=config['name'])
-
+    
     # wandb sweep
     if config['wandb_sweep']:
         config = wandb_sweep(config['name'], config) 
-
+    
     logger = config.get_logger('train')
-
+    
     # setup data_loader instances
     data_loader = config.init_obj('data_loader', module_data)
     valid_data_loader = data_loader.split_validation()
@@ -56,7 +55,7 @@ def main(config):
     logger.info(model)
     
     # prepare for (multi-device) GPU training
-    if config['name'] != 'Catboost': #and config['name'] != 'MVAE':
+    if config['name'] != 'Catboost':
         device, device_ids = prepare_device(config['n_gpu'])
         model = model.to(device)
         if len(device_ids) > 1:
@@ -86,7 +85,6 @@ def main(config):
             trainer = MVAE_Trainer(model, criterion, config=config,
                         data_loader=data_loader,
                         valid_data_loader=valid_data_loader, optimizer = optimizer)
-
         else:
             trainer = Trainer(model, criterion, metrics, optimizer,
                             config=config,
@@ -114,6 +112,7 @@ if __name__ == '__main__':
         CustomArgs(['--lr', '--learning_rate'], type=float, target='optimizer;args;lr'),
         CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size')
     ]
+    
     config = ConfigParser.from_args(args, options)
 
     if config["wandb_sweep"]:
@@ -124,5 +123,3 @@ if __name__ == '__main__':
         wandb.agent(sweep_id=sweep_id, function=functools.partial(main, config), count=1, entity='ffm')
     else: 
         main(config)
-
-    main(config)
