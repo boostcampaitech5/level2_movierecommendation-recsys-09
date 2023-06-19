@@ -4,11 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 import argparse
 import torch
-from tqdm import tqdm
-import data_loader.data_loaders as module_data
-import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import AutoRecTrainer
 
 from utils import submission_multi_vae
 

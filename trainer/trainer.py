@@ -158,7 +158,7 @@ class Trainer_new:
         print("Total Parameters:", sum([p.nelement() for p in self.model.parameters()]))
         self.criterion = nn.BCELoss()
 
-    def train(self, epoch):
+    def train_(self, epoch):
         self.iteration(epoch, self.train_dataloader)
 
     def valid(self, epoch):
@@ -344,11 +344,12 @@ class AutoRecTrainer(Trainer_new):
             else:
                 return self.get_full_sort_score(epoch, answer_list, pred_list)
             
-    def train_and_validate(self):
+    #def train_and_validate(self):
+    def train(self):
         checkpoint = self.wandb_name + ".pt"
         self.early_stopping = EarlyStopping(os.path.join(self.output_dir, checkpoint), patience=self.patience, verbose=True)
         for epoch in tqdm(range(self.epochs)):
-            self.train(epoch)
+            self.train_(epoch)
 
             scores, _ = self.valid(epoch)
             # wandb log

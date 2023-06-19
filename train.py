@@ -7,17 +7,12 @@ import os
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
-import torch
-from torch.utils.data import DataLoader
 import model.metric as module_metric
 from parse_config import ConfigParser
-import torch.optim as optim
 import model.model as module_arch
 from utils import prepare_device, wandb_sweep
-from utils.util import Recall_at_k_batch, submission_multi_vae
 import wandb
-from time import time
-from trainer import Trainer, AutoRecTrainer, Trainer_ML, MVAE_Trainer
+from trainer.select_trainer import select_trainer
 import model.loss as module_loss
 import data_loader.data_loaders as module_data
 os.environ['wandb mode'] = 'offline'
@@ -71,35 +66,16 @@ def main(config):
         lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
     # prepare trainer and start train
-    if config['name'] == "AutoRec_eval":
-        trainer = AutoRecTrainer(
-            model, data_loader, valid_data_loader, None, None, config)
-        trainer.train_and_validate()
-     
-    else:
-        if config['name'] == "Catboost":
-            trainer = Trainer_ML(model, config=config,
-                        data_loader=data_loader,
-                        valid_data_loader=valid_data_loader)
-        elif config['name'] == "MVAE":
-            trainer = MVAE_Trainer(model, criterion, config=config,
-                        data_loader=data_loader,
-                        valid_data_loader=valid_data_loader, optimizer = optimizer)
-        else:
-            trainer = Trainer(model, criterion, metrics, optimizer,
-                            config=config,
-                            device=device,
-                            data_loader=data_loader,
-                            valid_data_loader=valid_data_loader,
-                            lr_scheduler=lr_scheduler)
+    trainer = select_trainer(model, criterion, metrics, optimizer, 
+                             config, device, data_loader, valid_data_loader, 
+                             lr_scheduler)
 
-        trainer.train()
-
+    trainer.train()
 
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default='/opt/ml/input/level2_movierecommendation-recsys-09/config/config_MVAE.json', type=str,
+    args.add_argument('-c', '--config', default='/config/config.json', type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')

@@ -1,24 +1,18 @@
 import json
-import math
 import os
 import random
 
 import numpy as np
 import pandas as pd
-from typing import Union, Tuple, List
 from tqdm import tqdm
-import scipy
 
 import torch
-from scipy.sparse import csr_matrix
 
 from pathlib import Path
 from itertools import repeat
 from collections import OrderedDict
 
 import wandb
-
-from scipy import sparse
 import bottleneck as bn
 
 
@@ -223,12 +217,8 @@ def submission_multi_vae(config, model, device):
         "output/" + config['model_name']  + ".csv", index=False
     )
 
-
 def wandb_sweep(model_name, config):
-    if model_name == 'MVAE':
-
-def wandb_sweep(model_name, config):
-    if model_name == 'AutoRec':
+    if model_name == 'AutoRec' or model_name == 'MVAE':
         for k, v in wandb.config.items():
             config['trainer'][k] = v
     return config
