@@ -1,0 +1,95 @@
+{
+    "name": "MVAE",
+    "n_gpu": 1, 
+    "model_name" : "MultiVAE",
+    "wandb" : false,
+    "wandb_sweep" : false,
+    "fold":false,
+    "arch": {
+        "type": "MVAE",
+        "args": {
+
+            "n_items":6807,
+            "n_writers":2990,
+            "n_directors":1341,
+            "n_genres":19,
+            "embed_dim":16,
+            "bi_dropout": 0,
+            "dnn_hidden_units": [128, 128],
+            "dnn_activation":"relu",
+            "l2_reg_dnn":0,
+            "dnn_dropout":0,
+            "dropout":0.5,
+            "use_bn":false,
+            "init_std":0.0001,
+            "device":"cuda",
+            "max_seq_len": 5,
+            "p_dims":[200, 600, 6807]
+            }
+    },
+    "data_loader": {
+        "type": "CARSDataLoader",
+        "args":{
+            "data_dir": "/opt/ml/input/data/train/",
+            "train_data" : "train_ratings.csv",
+            "train_batch_size": 250,
+            "valid_batch_size":500,
+            "shuffle": true,
+            "num_workers": 2,
+            "max_seq_len": 5
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args":{
+            "lr": 0.0001,
+            "weight_decay": 0,
+            "amsgrad": true
+        }
+    },
+    "loss": "BCE_loss",
+    "metrics": [
+    ],
+    "lr_scheduler": {
+        "type": "StepLR",
+        "args": {
+            "step_size": 50,
+            "gamma": 0.1
+        }
+    },
+    "trainer": {
+        "epochs": 5,
+
+        "save_dir": "saved/",
+        "save_period": 1,
+        "verbosity": 2,
+        "total_anneal_steps" : 200000,
+        "anneal_cap" : 0.2,
+        "droput" : 0.5,
+        "lr" : 0.0003,
+        "monitor": "min val_loss",
+        "early_stop": 10,
+
+        "tensorboard": false
+    },
+    "test": {
+        "data_dir": "/opt/ml/input/data/train/",
+        "batch_size": 6807,
+        "model_dir": "/opt/ml/input/level2_movierecommendation-recsys-09/train",
+        "save" : "Multi_VAE.pt",
+        "submission_dir": "/opt/ml/input/output/"
+    },
+    "sweep_configuration": {
+        "method": "random",
+        "name": "sweep",
+        "metric": {
+            "goal": "maximize", 
+            "name": "r20"
+            },
+        "parameters": {
+            "anneal_cap": {"max": 0.1511, "min" : 0.1365},
+            "dropout": {"max": 0.2885, "min" : 0.2776},
+            "lr": {"max": 0.0003625, "min" : 0.0003026}
+        }
+    }
+}
