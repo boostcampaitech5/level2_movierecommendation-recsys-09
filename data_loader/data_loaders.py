@@ -265,3 +265,24 @@ class MultiVAEValidDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.train_input_data[idx, :], self.valid_input_data[idx,:]
+    
+
+class CARSDataLoader(DataLoader):
+    def __init__(self, **args):
+        self.train_dataset = MultiVAEDataset()
+        
+        self.args = args
+
+      
+        super().__init__(self.train_dataset, batch_size = self.args['train_batch_size'], drop_last=True, pin_memory=True, shuffle=True)
+
+    def split_validation(self):
+        self.valid_dataset = MultiVAEValidDataset(train_dataset = self.train_dataset)
+
+        return DataLoader(self.valid_dataset, batch_size=self.args['valid_batch_size'], drop_last=False, pin_memory=True, shuffle=False)
+        
+    """def submission(self):
+        self.submission_dataset = AutoRecDataset(self.args, self.item_mat, self.valid_mat)
+        return DataLoader(self.submission_dataset, self.batch_size, shuffle = False, pin_memory = True)"""
+
+

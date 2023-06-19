@@ -6,26 +6,11 @@
     "wandb_sweep" : false,
     "fold":false,
     "arch": {
-        "type": "MVAE",
+        "type": "MultiVAEModel",
         "args": {
-
-            "n_items":6807,
-            "n_writers":2990,
-            "n_directors":1341,
-            "n_genres":19,
-            "embed_dim":16,
-            "bi_dropout": 0,
-            "dnn_hidden_units": [128, 128],
-            "dnn_activation":"relu",
-            "l2_reg_dnn":0,
-            "dnn_dropout":0,
-            "dropout":0.5,
-            "use_bn":false,
-            "init_std":0.0001,
-            "device":"cuda",
-            "max_seq_len": 5,
-            "p_dims":[200, 600, 6807]
-            }
+            "p_dims":[200, 600, 6807],
+            "dropout_rate":0.5
+        }
     },
     "data_loader": {
         "type": "CARSDataLoader",
@@ -47,7 +32,7 @@
             "amsgrad": true
         }
     },
-    "loss": "BCE_loss",
+    "loss": "MultiVAE_loss",
     "metrics": [
     ],
     "lr_scheduler": {

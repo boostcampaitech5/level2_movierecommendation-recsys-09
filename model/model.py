@@ -22,25 +22,29 @@ class MnistModel(BaseModel):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
-class MultiVAE(nn.Module):
-    def __init__(self, config, p_dims, q_dims=None, dropout=0.5):
-        super(MultiVAE, self).__init__()
-        self.p_dims = p_dims
-        if q_dims:
-            assert q_dims[0] == p_dims[-1], "In and Out dimensions must equal to each other"
-            assert q_dims[-1] == p_dims[0], "Latent dimension for p- and q- network mismatches."
-            self.q_dims = q_dims
+    
+class MultiVAEModel(nn.Module):
+    def __init__(self, **args):
+        super(MultiVAEModel, self).__init__()
+        self.p_dims = args["p_dims"]
+        self.dropout = args["dropout_rate"]
+        self.q_dims = None
+        
+        if self.q_dims:
+            assert self.q_dims[0] == self.p_dims[-1], "In and Out dimensions must equal to each other"
+            assert self.q_dims[-1] == self.p_dims[0], "Latent dimension for p- and q- network mismatches."
+            self.q_dims = self.q_dims
         else:
-            self.q_dims = p_dims[::-1]
+            self.q_dims = self.p_dims[::-1]
 
         # Last dimension of q- network is for mean and variance
-        temp_q_dims = self.q_dims[:-1] + [self.q_dims[-1] * 2]
-        self.q_layers = nn.ModuleList([nn.Linear(d_in, d_out) for
-            d_in, d_out in zip(temp_q_dims[:-1], temp_q_dims[1:])])
-        self.p_layers = nn.ModuleList([nn.Linear(d_in, d_out) for
-            d_in, d_out in zip(self.p_dims[:-1], self.p_dims[1:])])
+        self.temp_q_dims = self.q_dims[:-1] + [self.q_dims[-1] * 2]
+        self.q_layers = nn.ModuleList([nn.Linear(self.d_in, self.d_out) for
+            self.d_in, self.d_out in zip(self.temp_q_dims[:-1], self.temp_q_dims[1:])])
+        self.p_layers = nn.ModuleList([nn.Linear(self.d_in, self.d_out) for
+            self.d_in, self.d_out in zip(self.p_dims[:-1], self.p_dims[1:])])
         
-        self.drop = nn.Dropout(dropout)
+        self.drop = nn.Dropout(self.dropout)
         self.init_weights()
     
     def forward(self, input):
@@ -100,8 +104,4 @@ class MultiVAE(nn.Module):
             # Normal Initialization for Biases
             layer.bias.data.normal_(0.0, 0.001)
 
-    def loss_function(self, recon_x, x, mu, logvar, anneal=1.0):
-        BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
-        KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
-
-        return BCE + anneal * KLD
+    

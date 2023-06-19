@@ -3,7 +3,7 @@ import os
 import torch
 from torchvision.utils import make_grid
 from base import BaseTrainer
-from utils import inf_loop, MetricTracker, EarlyStopping, Recall_at_k_batch, submission_multi_vae
+from utils import inf_loop, MetricTracker, EarlyStopping, Recall_at_k_batch
 import sys
 import torch.nn as nn
 from tqdm import tqdm
@@ -378,8 +378,9 @@ class Trainer_ML():
 
 
 class MVAE_Trainer():
-    def __init__(self, model, config, data_loader, valid_data_loader, optimizer):
+    def __init__(self, model, criterion, config, data_loader, valid_data_loader, optimizer):
         self.model = model
+        self.criterion = criterion
         self.config = config
         self.train_loader = data_loader
         self.valid_data_loader = valid_data_loader
@@ -409,7 +410,7 @@ class MVAE_Trainer():
 
                 recon_batch, mu, logvar = self.model(input_data)
                 
-                loss = self.model.loss_function(recon_batch, input_data, mu, logvar, anneal)
+                loss = self.criterion(recon_batch, input_data, mu, logvar, anneal)
                 
                 loss.backward()
                 train_loss += loss.item()
@@ -449,7 +450,7 @@ class MVAE_Trainer():
 
                     recon_batch, mu, logvar = self.model(input_data)
 
-                    loss = self.model.loss_function(recon_batch, input_data, mu, logvar, anneal)
+                    loss = self.criterion(recon_batch, input_data, mu, logvar, anneal)
 
                     total_loss += loss.item()
                     recon_batch = recon_batch.cpu().numpy()
@@ -480,9 +481,3 @@ class MVAE_Trainer():
                 with open(self.config['test']['save'], 'wb') as f:
                     torch.save(self.model, f)
                 best_r10 = np.mean(r10_list)
-
-        # inference
-        with open(self.config['test']['save'], 'rb') as f:
-            model = torch.load(f)
-
-        submission_multi_vae(self.config, model, self.device)

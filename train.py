@@ -7,12 +7,10 @@ import os
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
-from data_loader.data_loaders import MultiVAEDataset, MultiVAEValidDataset
 import torch
 from torch.utils.data import DataLoader
 import model.metric as module_metric
 from parse_config import ConfigParser
-from model.model_MVAE import MultiVAE
 import torch.optim as optim
 import model.model as module_arch
 from utils import prepare_device, wandb_sweep
@@ -35,10 +33,6 @@ import functools
 
 def main(config):
 
-    
-    #global device
-    device = torch.device("cuda" if config['arch']['args']['device'] == "cuda" else "cpu")
-    #device = torch.device("cpu")
 
         # wandb init
     if config['wandb']:
@@ -52,27 +46,17 @@ def main(config):
     logger = config.get_logger('train')
 
     # setup data_loader instances
-    if config['name'] != 'MVAE':
-        data_loader = config.init_obj('data_loader', module_data)
-        valid_data_loader = data_loader.split_validation()
+    data_loader = config.init_obj('data_loader', module_data)
+    valid_data_loader = data_loader.split_validation()
+    #if config['name'] != 'MVAE':
+        
 
-        # build model architecture, then print to console
-        model = config.init_obj('arch', module_arch)
-        logger.info(model)
-    else :
-        # setup data_loader instances
-        train_dataset = MultiVAEDataset()
-        valid_dataset = MultiVAEValidDataset(train_dataset = train_dataset)
-
-        train_loader = DataLoader(train_dataset, batch_size=config['data_loader']['args']['train_batch_size'], drop_last=True, pin_memory=True, shuffle=True)
-        valid_loader = DataLoader(valid_dataset, batch_size=config['data_loader']['args']['valid_batch_size'], drop_last=False, pin_memory=True, shuffle=False)
-        # 모델 정의
-        model = MultiVAE(config, p_dims=config['arch']['args']['p_dims'], q_dims=None, dropout=config['arch']['args']['dropout']).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=config['optimizer']['args']['lr'], weight_decay=0)
-
-###########
+    # build model architecture, then print to console
+    model = config.init_obj('arch', module_arch)
+    logger.info(model)
+    
     # prepare for (multi-device) GPU training
-    if config['name'] != 'Catboost' and config['name'] != 'MVAE':
+    if config['name'] != 'Catboost': #and config['name'] != 'MVAE':
         device, device_ids = prepare_device(config['n_gpu'])
         model = model.to(device)
         if len(device_ids) > 1:
@@ -99,9 +83,9 @@ def main(config):
                         data_loader=data_loader,
                         valid_data_loader=valid_data_loader)
         elif config['name'] == "MVAE":
-            trainer = MVAE_Trainer(model, config=config,
-                        data_loader=train_loader,
-                        valid_data_loader=valid_loader, optimizer = optimizer)
+            trainer = MVAE_Trainer(model, criterion, config=config,
+                        data_loader=data_loader,
+                        valid_data_loader=valid_data_loader, optimizer = optimizer)
 
         else:
             trainer = Trainer(model, criterion, metrics, optimizer,
