@@ -18,6 +18,9 @@ from collections import OrderedDict
 
 import wandb
 
+from scipy import sparse
+import bottleneck as bn
+
 
 def ensure_dir(dirname):
     dirname = Path(dirname)
@@ -138,8 +141,6 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.checkpoint_path)
         self.score_min = score
 
-
-
 def generate_submission_file(data_file, preds, model_name):
 
     rating_df = pd.read_csv(data_file)
@@ -162,11 +163,72 @@ def generate_submission_file(data_file, preds, model_name):
         f"output/{model_name}_submission.csv", index=False
     )
 
+
+
+def numerize(tp, profile2id, show2id):
+    uid = tp['user'].apply(lambda x: profile2id[x])
+    sid = tp['item'].apply(lambda x: show2id[x])
+    return pd.DataFrame(data={'uid': uid, 'sid': sid}, columns=['uid', 'sid'])
+
+def Recall_at_k_batch(X_pred, label_data, k=100):
+    batch_users = X_pred.shape[0]
+
+    idx = bn.argpartition(-X_pred, k, axis=1) 
+    X_pred_binary = np.zeros_like(X_pred, dtype=bool)
+    X_pred_binary[np.arange(batch_users)[:, np.newaxis], idx[:, :k]] = True
+
+    X_true_binary = (label_data > 0)
+    tmp = (np.logical_and(X_true_binary, X_pred_binary).sum(axis=1)).astype(np.float32)
+    recall = tmp / np.minimum(k, X_true_binary.sum(axis=1))
+    return recall
+
+
+
+def submission_multi_vae(config, model, device):
+    rating_df = pd.read_csv(os.path.join(config['test']['data_dir'], 'train_ratings.csv'), header=0)
+
+    test_unique_uid = pd.unique(rating_df['user'])
+    test_unique_sid = pd.unique(rating_df['item'])
+    n_items = len(pd.unique(rating_df['item']))
+
+    show2id = dict((sid, i) for (i, sid) in enumerate(test_unique_sid))
+    profile2id = dict((pid, i) for (i, pid) in enumerate(test_unique_uid))
+
+    test_rating_df = numerize(rating_df, profile2id, show2id)
+
+    n_users = test_rating_df['uid'].max() + 1
+    rows, cols = test_rating_df['uid'], test_rating_df['sid']
+    data = sparse.csr_matrix((np.ones_like(rows),
+                            (rows, cols)), dtype='float64',
+                            shape=(n_users, n_items))
+
+    test_data_tensor = torch.FloatTensor(data.toarray()).to(device)
+
+    recon_batch, mu, logvar = model(test_data_tensor)
+
+    id2show = dict(zip(show2id.values(),show2id.keys()))
+    id2profile = dict(zip(profile2id.values(),profile2id.keys()))
+
+    result = []
+
+    for user in range(len(recon_batch)):
+        rating_pred = recon_batch[user]
+        rating_pred[test_data_tensor[user].reshape(-1) > 0] = 0
+
+        idx = np.argsort(rating_pred.detach().cpu().numpy())[-10:][::-1]
+        for i in idx:
+            result.append((id2profile[user], id2show[i]))
+# config['test']['submission_dir'] + 
+    pd.DataFrame(result, columns=["user", "item"]).to_csv( 
+        "output/" + config['model_name']  + ".csv", index=False
+    )
+
+
+def wandb_sweep(model_name, config):
+    if model_name == 'MVAE':
+
 def wandb_sweep(model_name, config):
     if model_name == 'AutoRec':
         for k, v in wandb.config.items():
             config['trainer'][k] = v
-
     return config
-
-

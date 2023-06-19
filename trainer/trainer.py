@@ -3,14 +3,17 @@ import os
 import torch
 from torchvision.utils import make_grid
 from base import BaseTrainer
-from utils import inf_loop, MetricTracker, EarlyStopping
-
+from utils import inf_loop, MetricTracker, EarlyStopping, Recall_at_k_batch
+import sys
 import torch.nn as nn
 from tqdm import tqdm
 from torch.optim import Adam
 import wandb
-
+from time import time
 from model.metric import ndcg_k, recall_at_k
+
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
 
 class Trainer(BaseTrainer):
     """
@@ -372,3 +375,109 @@ class Trainer_ML():
     def train(self):
         self.model.train(self.data_loader.train_dataset, self.valid_data_loader)
         self.model.save_model_pkl(self.config["trainer"]["save_dir"]+self.config["trainer"]["save_model_path"])
+
+        
+class MVAE_Trainer():
+    def __init__(self, model, criterion, config, data_loader, valid_data_loader, optimizer):
+        self.model = model
+        self.criterion = criterion
+        self.config = config
+        self.train_loader = data_loader
+        self.valid_data_loader = valid_data_loader
+        self.optimizer = optimizer
+        self.cuda_condition = torch.cuda.is_available()
+        self.device = torch.device("cuda" if self.cuda_condition else "cpu")
+
+    def train(self):
+        update_count = 0
+        best_r10 = -np.inf
+
+        for epoch in range(1, self.config['trainer']['epochs'] + 1):
+            epoch_start_time = time()
+            ###### train ######
+            self.model.train()
+            train_loss = 0.0
+            start_time = time()
+
+            for batch_idx, batch_data in enumerate(self.train_loader):
+                input_data = batch_data.to(self.device)
+                self.optimizer.zero_grad()
+                if self.config['trainer']['total_anneal_steps'] > 0:
+                    anneal = min(self.config['trainer']['anneal_cap'], 
+                                    1. * update_count / self.config['trainer']['total_anneal_steps'])
+                else:
+                    anneal = self.config['trainer']['anneal_cap']
+
+                recon_batch, mu, logvar = self.model(input_data)
+                
+                loss = self.criterion(recon_batch, input_data, mu, logvar, anneal)
+                
+                loss.backward()
+                train_loss += loss.item()
+                self.optimizer.step()
+
+                update_count += 1        
+
+                log_interval = 100
+                if batch_idx % log_interval == 0 and batch_idx > 0:
+                    elapsed = time() - start_time
+                    print('| epoch {:3d} | {:4d}/{:4d} batches | ms/batch {:4.2f} | '
+                            'loss {:4.2f}'.format(
+                                epoch, batch_idx, len(range(0, 6807, self.config['data_loader']['args']['train_batch_size'])),
+                                elapsed * 1000 / log_interval,
+                                train_loss / log_interval))
+
+                    start_time = time()
+                    train_loss = 0.0
+
+            ###### eval ######
+            recall10_list = []
+            recall20_list = []
+            total_loss = 0.0
+            self.model.eval()
+            with torch.no_grad():
+                for batch_data in self.valid_data_loader:
+                    input_data, label_data = batch_data # label_data = validation set 추론에도 사용되지 않고 오로지 평가의 정답지로 사용된다. 
+                    input_data = input_data.to(self.device)
+                    label_data = label_data.to(self.device)
+                    label_data = label_data.cpu().numpy()
+                    
+                    if self.config['trainer']['total_anneal_steps'] > 0:
+                        anneal = min(self.config['trainer']['anneal_cap'], 
+                                    1. * update_count / self.config['trainer']['total_anneal_steps'])
+                    else:
+                        anneal = self.config['trainer']['anneal_cap']
+
+                    recon_batch, mu, logvar = self.model(input_data)
+
+                    loss = self.criterion(recon_batch, input_data, mu, logvar, anneal)
+
+                    total_loss += loss.item()
+                    recon_batch = recon_batch.cpu().numpy()
+                    recon_batch[input_data.cpu().numpy().nonzero()] = -np.inf
+
+                    recall10 = Recall_at_k_batch(recon_batch, label_data, 10)
+                    recall20 = Recall_at_k_batch(recon_batch, label_data, 20)
+                    
+                    recall10_list.append(recall10)
+                    recall20_list.append(recall20)
+            
+            total_loss /= len(range(0, 6807, 1000))
+            r10_list = np.concatenate(recall10_list)
+            r20_list = np.concatenate(recall20_list)
+                    
+            print('-' * 89)
+            print('| end of epoch {:3d} | time: {:4.2f}s | valid loss {:4.2f} | '
+                    'r10 {:5.3f} | r20 {:5.3f}'.format(
+                        epoch, time() - epoch_start_time, total_loss, np.mean(r10_list), np.mean(r20_list)))
+            print('-' * 89)
+            
+            if(self.config['wandb']):
+                wandb.log({"valid loss" : total_loss,
+                "r20" : np.mean(r20_list), 
+                "r10" : np.mean(r10_list)})
+
+            if np.mean(r10_list) > best_r10:
+                with open(self.config['test']['save'], 'wb') as f:
+                    torch.save(self.model, f)
+                best_r10 = np.mean(r10_list)

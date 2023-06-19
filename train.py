@@ -2,22 +2,35 @@ import argparse
 import collections
 import torch
 import numpy as np
-import data_loader.data_loaders as module_data
-import model.loss as module_loss
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
+import torch
+from torch.utils.data import DataLoader
 import model.metric as module_metric
-import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import Trainer, AutoRecTrainer, Trainer_ML
+import torch.optim as optim
+import model.model as module_arch
 from utils import prepare_device, wandb_sweep
+from utils.util import Recall_at_k_batch, submission_multi_vae
 import wandb
+from time import time
+from trainer import Trainer, AutoRecTrainer, Trainer_ML, MVAE_Trainer
+import model.loss as module_loss
+import data_loader.data_loaders as module_data
+os.environ['wandb mode'] = 'offline'
 import functools
 
+
 # fix random seeds for reproducibility
-SEED = 123
+SEED = 1111
 torch.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
+import functools
 
 def main(config):
     # wandb init
@@ -34,11 +47,13 @@ def main(config):
     # setup data_loader instances
     data_loader = config.init_obj('data_loader', module_data)
     valid_data_loader = data_loader.split_validation()
+    #if config['name'] != 'MVAE':
+        
 
     # build model architecture, then print to console
     model = config.init_obj('arch', module_arch)
     logger.info(model)
-
+    
     # prepare for (multi-device) GPU training
     if config['name'] != 'Catboost':
         device, device_ids = prepare_device(config['n_gpu'])
@@ -66,6 +81,10 @@ def main(config):
             trainer = Trainer_ML(model, config=config,
                         data_loader=data_loader,
                         valid_data_loader=valid_data_loader)
+        elif config['name'] == "MVAE":
+            trainer = MVAE_Trainer(model, criterion, config=config,
+                        data_loader=data_loader,
+                        valid_data_loader=valid_data_loader, optimizer = optimizer)
         else:
             trainer = Trainer(model, criterion, metrics, optimizer,
                             config=config,
@@ -77,9 +96,10 @@ def main(config):
         trainer.train()
 
 
+
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default=None, type=str,
+    args.add_argument('-c', '--config', default='/opt/ml/input/level2_movierecommendation-recsys-09/config/config_MVAE.json', type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')
