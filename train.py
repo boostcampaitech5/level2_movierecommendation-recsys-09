@@ -8,7 +8,9 @@ import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer, BERT4RecTrainer
-from utils import prepare_device
+from utils import prepare_device, wandb_sweep
+import wandb
+import functools
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -18,6 +20,15 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 def main(config):
+    # wandb init
+    if config['wandb']:
+        wandb.login()
+        wandb.init(project=config['name'], entity="ffm", name=config['name'])
+    
+    # wandb sweep
+    if config['wandb_sweep']:
+        config = wandb_sweep(config['name'], config)
+        
     logger = config.get_logger('train')
 
     # setup data_loader instances
@@ -75,4 +86,13 @@ if __name__ == '__main__':
         CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size')
     ]
     config = ConfigParser.from_args(args, options)
-    main(config)
+    
+    if config["wandb_sweep"]:
+        sweep_id = wandb.sweep(
+            sweep=config['sweep_configuration'],
+            entity='ffm',
+            project=config['name']
+        )
+        wandb.agent(sweep_id=sweep_id, function=functools.partial(main, config), count=9, entity='ffm')
+    else: 
+        main(config)

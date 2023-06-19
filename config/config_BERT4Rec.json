@@ -3,12 +3,13 @@
     "n_gpu": 1,
     
     "wandb": false,
+    "wandb_name" : "BERT4Rec",
     "wandb_sweep": false,
     "arch": {
         "type": "BERT4Rec",
         "args": {
-            "hidden_units" : 128,
-            "num_heads" : 2,
+            "hidden_units" : 256,
+            "num_heads" : 1,
             "num_layers" :2,
             "dropout_rate" : 0.5,
             "device" : "cuda",
@@ -64,6 +65,18 @@
     },
     "test": {
         "model_dir": "/opt/ml/input/saved/BERT4Recmodel.pkl",
-        "output_dir": "/opt/ml/input/output/BERT4Rec_submission_1.csv"
+        "output_dir": "/opt/ml/input/output/BERT4Rec_submission.csv"
+    },
+    "sweep_configuration": {
+        "method": "grid",
+        "name": "sweep",
+        "metric": {
+            "goal": "minimize", 
+            "name": "loss"
+            },
+        "parameters": {
+            "hidden_units": {"values": [100, 128, 256]},
+            "num_heads" : {"values": [1, 2, 4]}
+        }
     }
 }

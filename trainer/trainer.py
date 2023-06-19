@@ -4,7 +4,7 @@ from torchvision.utils import make_grid
 from base import BaseTrainer
 from utils import inf_loop, idx2, MetricTracker
 from tqdm import tqdm
-
+import wandb
 import pickle
 
 class Trainer(BaseTrainer):
@@ -117,6 +117,7 @@ class BERT4RecTrainer():
         self.model = model
         self.config = config["trainer"]
         self.config_test = config["data_loader"]["args"]
+        self.wandb = config["wandb"]
         self.data_loader = data_loader
         self.criterion = criterion
         self.optimizer = optimizer
@@ -145,6 +146,11 @@ class BERT4RecTrainer():
                 self.optimizer.step()
                 
                 tbar.set_description(f'Epoch: {epoch:3d}| Step: {step:3d}| Train loss: {loss:.5f}')
+            
+            if self.wandb:
+                wandb.log({
+                    "loss" : loss
+                })
                 
         self.save_model_pkl(self.config["save_dir"] + self.config["model_path"])
         

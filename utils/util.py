@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 from itertools import repeat
 from collections import OrderedDict
+import wandb
 
 
 def ensure_dir(dirname):
@@ -77,3 +78,14 @@ def idx2(args):
     idx2item = pd.Series(data= item_ids, index=np.arange(len(item_ids))+ 1)
     idx2user = pd.Series(data = user_ids)
     return idx2user, idx2item
+
+def wandb_sweep(model_name, config):
+    if model_name == 'AutoRec':
+        for k, v in wandb.config.items():
+            config['trainer'][k] = v
+            
+    elif model_name == 'BERT4Rec':
+        for k, v in wandb.config.items():
+            config['arch']['args'][k] = v
+
+    return config
