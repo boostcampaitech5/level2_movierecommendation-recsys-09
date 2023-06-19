@@ -67,7 +67,6 @@ def main(config):
         train_loader = DataLoader(train_dataset, batch_size=config['data_loader']['args']['train_batch_size'], drop_last=True, pin_memory=True, shuffle=True)
         valid_loader = DataLoader(valid_dataset, batch_size=config['data_loader']['args']['valid_batch_size'], drop_last=False, pin_memory=True, shuffle=False)
         # 모델 정의
-        n_items = train_dataset.n_items
         model = MultiVAE(config, p_dims=config['arch']['args']['p_dims'], q_dims=None, dropout=config['arch']['args']['dropout']).to(device)
         optimizer = optim.Adam(model.parameters(), lr=config['optimizer']['args']['lr'], weight_decay=0)
 
