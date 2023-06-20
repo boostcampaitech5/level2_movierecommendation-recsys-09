@@ -1,6 +1,5 @@
 import torch.nn.functional as F
 import torch
-import torch.nn as nn
 
 
 def get_betas(model, users, items):
@@ -10,13 +9,33 @@ def get_betas(model, users, items):
     weights = 1 + model.lambda_ * (1/user_degree[users]) * torch.sqrt((user_degree[users]+1)/(item_degree[items]+1))
     
     return weights
-    
-    
+
+   
 def cal_loss_L(beta_weight, output, target):
     
     loss = F.binary_cross_entropy(output, target.float(), weight=beta_weight, reduction='none')
     
     return loss.sum()
+
+
+def cal_loss_I(model, users, items):
+    omega_mat = model.omega_mat.to('cuda')
+    omega_idx = model.omega_idx_mat.to('cuda')
+    
+    user_embeds = model.user_embeds
+    item_embeds = model.item_embeds
+    
+    item_idx_mat = omega_idx[items].squeeze(1)
+    
+    e_j = item_embeds(item_idx_mat.int())
+    e_u = user_embeds(users).expand(-1, e_j.shape[1], -1)
+    
+    mm = torch.log((e_j * e_u).sum(-1).sigmoid())
+    weight = omega_mat[items].squeeze(1)
+    
+    loss = (mm * weight).sum(-1)
+    
+    return -1 * loss.sum()
 
 
 def norm_loss(model):
@@ -33,22 +52,10 @@ def UltraGCN_loss(model, output, data, target):
     
     beta_weight = get_betas(model, users, items)
     
+    pos_idx = torch.nonzero(target)
+
     loss = cal_loss_L(beta_weight, output, target) 
+    loss += cal_loss_I(model, users[pos_idx], items[pos_idx]) * model.gamma
     loss += model.delta * norm_loss(model)
 
     return loss
-
-  
-def nll_loss(output, target):
-    return F.nll_loss(output, target)
-
-  
-def CE_loss(output, target):
-    criterion = nn.CrossEntropyLoss(ignore_index=0)
-    return criterion(output, target)
-
-  
-def MultiVAE_loss(recon_x, x, mu, logvar, anneal=1.0):
-    BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
-    return BCE + anneal * KLD

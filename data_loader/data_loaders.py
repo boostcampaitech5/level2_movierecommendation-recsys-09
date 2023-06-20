@@ -1,4 +1,3 @@
-from torchvision import datasets, transforms
 from base import BaseDataLoader
 import torch
 import os
@@ -8,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from sklearn.preprocessing import LabelEncoder, MultiLabelBinarizer
 from data_loader.preprocess import train_valid_split, make_inter_mat, BERT4Rec_preprocess
+from .data_preprocess import ultragcn_preprocess
 
 from time import time
 from scipy import sparse
@@ -21,18 +21,53 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 
-class MnistDataLoader(BaseDataLoader):
-    """
-    MNIST data loading demo using BaseDataLoader
-    """
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_workers=1, training=True):
-        trsfm = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ])
-        self.data_dir = data_dir
-        self.dataset = datasets.MNIST(self.data_dir, train=training, download=True, transform=trsfm)
-        super().__init__(self.dataset, batch_size, shuffle, validation_split, num_workers)
+class UltraGCNDataset(Dataset):
+    def __init__(self, data, type="train"):
+        self.data = data
+        self.type = type
+        
+        if self.type == "test":
+            self.X = self.data
+        else:
+            self.X = self.data.drop('rating', axis=1)
+            self.y = self.data.rating
+        
+    def __getitem__(self, index):
+        
+        if self.type == "test":
+            return self.X.loc[index].values
+        else:
+            return self.X.loc[index].values, self.y.loc[index]
+    
+    def __len__(self):
+        return len(self.data)      
+
+
+class UltraGCNDataLoader(DataLoader):
+    def __init__(self, data_dir, batch_size, num_neg, shuffle=False, num_workers=1, validation_split=0.0):
+        
+        self.train, self.valid = self.load_context_data(data_dir, num_neg, validation_split)
+        self.train_dataset = UltraGCNDataset(self.train, "train")
+        self.valid_dataset = UltraGCNDataset(self.valid, "valid")
+        
+        self.init_kwargs = {
+            'batch_size': batch_size,
+            'shuffle': shuffle,
+            'num_workers': num_workers
+        }
+        
+        super().__init__(self.train_dataset, **self.init_kwargs)
+        
+        
+    def load_context_data(self, data_dir, num_neg, validation_split):
+        
+        if not os.path.exists(os.path.join(data_dir, "train_data.csv")):
+            ultragcn_preprocess(data_dir, num_neg, validation_split)
+        
+        return pd.read_csv(os.path.join(data_dir, "train_data.csv")), pd.read_csv(os.path.join(data_dir, "valid_data.csv"))
+    
+    def split_validation(self):
+        return DataLoader(self.valid_dataset, **self.init_kwargs)
 
 
 class AutoRecDataset(Dataset):
@@ -78,6 +113,7 @@ class AutoRecDataLoader(DataLoader):
         self.submission_dataset = AutoRecDataset(self.args, self.item_mat, self.valid_mat)
         return DataLoader(self.submission_dataset, self.batch_size, shuffle = False, pin_memory = True)
 
+      
 class CatboostDataset():
     def __init__(self, data_path, data_dir, type):
         self.data = pd.read_csv(data_path)
@@ -246,6 +282,7 @@ class MultiVAEDataset(Dataset):
     def __getitem__(self, idx):
         return self.train_input_data[idx,:]
 
+      
 class MultiVAEValidDataset(Dataset):
     def __init__(self, train_dataset):
         self.n_users = train_dataset.n_users
@@ -283,6 +320,7 @@ class MultiVAEDataLoader(DataLoader):
 
         return DataLoader(self.valid_dataset, batch_size=self.args['valid_batch_size'], drop_last=False, pin_memory=True, shuffle=False)
 
+      
 class SeqDataset(Dataset):
     def __init__(self, user_train, num_user, num_item, max_len, mask_prob):
         self.user_train = user_train
@@ -325,6 +363,7 @@ class SeqDataset(Dataset):
         tokens = [0] * mask_len + tokens
         labels = [0] * mask_len + labels
         return torch.LongTensor(tokens), torch.LongTensor(labels)
+    
     
 class BERT4RecDataLoader(DataLoader):
     def __init__(self, **args):

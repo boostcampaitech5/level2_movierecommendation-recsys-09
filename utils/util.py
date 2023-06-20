@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from scipy import sparse
+
 import torch
 
 from pathlib import Path
@@ -14,6 +16,9 @@ from collections import OrderedDict
 
 import wandb
 import bottleneck as bn
+
+from operator import getitem
+from functools import reduce
 
 
 def ensure_dir(dirname):
@@ -225,7 +230,21 @@ def wandb_sweep(model_name, config):
     elif model_name == 'BERT4Rec':
         for k, v in wandb.config.items():
             config['arch']['args'][k] = v
+           
+    elif model_name == 'UltraGCN':
+        for k, v in wandb.config.items():
+            _set_by_path(config, k, v)
+        
     return config
+
+def _set_by_path(tree, keys, value):
+    """Set a value in a nested object in tree by sequence of keys."""
+    keys = keys.split(';')
+    _get_by_path(tree, keys[:-1])[keys[-1]] = value
+
+def _get_by_path(tree, keys):
+    """Access a nested object in tree by sequence of keys."""
+    return reduce(getitem, keys, tree)
 
 
 def idx2(args):

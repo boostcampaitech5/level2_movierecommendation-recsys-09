@@ -1,0 +1,80 @@
+{   
+    "name": "UltraGCN",
+    "n_gpu": 1,
+
+    "arch": {
+        "type": "UltraGCN",
+        "args": {
+            "data_dir": "/opt/ml/input/data/train/",
+            "user_num": 31360,
+            "item_num": 6807,
+            "embedding_dim": 64,
+            "lambda": 0.8,
+            "delta": 1e-4
+        }
+    },
+    "data_loader": {
+        "type": "UltraGCNDataLoader",
+        "args":{
+            "data_dir": "/opt/ml/input/data/train/",
+            "batch_size": 512,
+            "shuffle": true,
+            "num_workers": 2,
+            "validation_split": 0.3,
+            "num_neg": 200
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args":{
+            "lr": 1e-4,
+            "weight_decay": 0,
+            "amsgrad": true
+        }
+    },
+    "loss": "UltraGCN_loss",
+    "metrics": [
+    ],
+    "lr_scheduler": {
+        "type": "StepLR",
+        "args": {
+            "step_size": 50,
+            "gamma": 0.1
+        }
+    },
+    "trainer": {
+        "epochs": 100,
+
+        "save_dir": "saved/",
+        "save_period": 1,
+        "verbosity": 2,
+        
+        "monitor": "min val_loss",
+        "early_stop": 2,
+
+        "tensorboard": false
+    },
+    "test": {
+        "data_dir": "/opt/ml/input/data/train/",
+        "model_dir": "/opt/ml/level2_movierecommendation-recsys-09/saved/models/UltraGCN/0619_170706/",
+        "submission_dir": "./submission/",
+        "batch_size": 6807
+    },
+    "sweep_configuration": {
+        "method": "random",
+        "name": "sweep",
+        "metric": {
+            "goal": "minimize", 
+            "name": "val_loss"
+            },
+        "parameters": {
+            "arch;args;embedding_dim": {"values": [64, 128, 256]},
+            "arch;args;lambda": {"values": [0.4, 0.6, 0.8, 1.0, 1.2]},
+            "optimizer;args;lr": {
+                "distribution": "uniform",
+                "min": 0.0001,
+                "max": 0.001
+            }
+        }
+    }
+}
