@@ -2,9 +2,9 @@
     "name": "BERT4Rec",
     "n_gpu": 1,
     
-    "wandb": false,
+    "wandb": true,
     "wandb_name" : "BERT4Rec",
-    "wandb_sweep": false,
+    "wandb_sweep": true,
     "arch": {
         "type": "BERT4Rec",
         "args": {
