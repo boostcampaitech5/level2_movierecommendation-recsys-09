@@ -17,7 +17,8 @@ def ultragcn_preprocess(data_dir, num_neg, validation_split):
     
     for column in columns:
         merged_df = indexing(rating_df, merged_df, column)
-        
+    
+    save_ii_constraint_matrix(data_dir, merged_df)
     save_constraint_matrix(data_dir, merged_df)
     
     split = StratifiedShuffleSplit(n_splits=1, test_size=validation_split, random_state=123)
@@ -83,6 +84,37 @@ def unindexing(rating_df, df, column):
     return df
 
 
+def save_ii_constraint_matrix(data_dir, data):
+    
+    adj_df = data.pivot(index='user', columns='item', values='rating').fillna(0)
+    adj_matrix = torch.from_numpy(adj_df.values).float().to('cuda')
+    
+    num_neighbors = 10
+    A = adj_matrix.T.matmul(adj_matrix)	# I * I
+    
+    g_i = torch.sum(A, dim=1).unsqueeze(1).expand(-1, A.shape[1])
+    g_j = g_i.T
+    diagonal_mat = torch.diagonal(A)
+    
+    weights = (A / (g_i - diagonal_mat.unsqueeze(1).expand(-1, A.shape[1]))) * torch.sqrt(g_i / g_j)
+    
+    n_items = weights.shape[0]
+    omegas = torch.zeros((n_items, num_neighbors))
+    idxs = torch.zeros((n_items, num_neighbors))
+    
+    for i in range(n_items):
+        row = weights[i, :]
+        omega, idx = torch.topk(row, num_neighbors)
+        omegas[i] = omega
+        idxs[i] = idx
+        
+    with open(os.path.join(data_dir, 'omega_matrix.pickle'), 'wb') as f:
+        pickle.dump(omegas, f)
+        
+    with open(os.path.join(data_dir, 'omega_idx_matrix.pickle'), 'wb') as f:
+        pickle.dump(idxs, f)
+
+
 def ultragcn_total_test_preprocess(data_dir):
     rating_df = pd.read_csv(os.path.join(data_dir, "train_ratings.csv"))
     rating_df.drop(['time'], axis=1, inplace=True)
@@ -93,8 +125,6 @@ def ultragcn_total_test_preprocess(data_dir):
     
     merged_df = user.merge(item, how='cross').sort_values(['user', 'item']).reset_index(drop=True)
     
-    print('df Done')
-
     for column in columns:
         merged_df = indexing(rating_df, merged_df, column)
         
