@@ -33,10 +33,9 @@ def UltraGCN_loss(model, output, data, target):
     beta_weight = get_betas(model, users, items)
     
     loss = cal_loss_L(beta_weight, output, target) 
-    loss += model.gamma * norm_loss(model)
+    loss += model.delta * norm_loss(model)
 
     return loss
-
 
 def BCE_loss(output, target):
     loss = torch.nn.BCELoss(reduction="none")

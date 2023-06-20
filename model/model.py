@@ -2,6 +2,7 @@ import torch.nn as nn
 import pickle
 import os
 
+
 class UltraGCN(nn.Module):
     def __init__(self, **params):
         super(UltraGCN, self).__init__()
@@ -10,7 +11,7 @@ class UltraGCN(nn.Module):
         self.item_num = params['item_num']
         self.embedding_dim = params['embedding_dim']
         
-        self.gamma = params['gamma']
+        self.delta = params['delta']
         self.lambda_ = params['lambda']
 
         self.user_embeds = nn.Embedding(self.user_num, self.embedding_dim)
