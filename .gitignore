@@ -105,6 +105,8 @@ data/
 input/
 saved/
 datasets/
+wandb/
+submission/
 
 # editor, os cache directory
 .vscode/
