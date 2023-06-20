@@ -105,9 +105,14 @@ data/
 input/
 saved/
 datasets/
+output/
+catboost_info/
 wandb/
+output/
+
 
 # editor, os cache directory
 .vscode/
 .idea/
 __MACOSX/
+.flake8
