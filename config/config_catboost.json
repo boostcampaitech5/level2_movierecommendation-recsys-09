@@ -1,0 +1,36 @@
+{
+    "name": "Catboost",
+    "wandb": false,
+    "wandb_sweep": false,
+
+    "arch": {
+        "type": "CatBoostModel",
+        "args": {
+            "loss_function": "RMSE",
+            "task_type": "GPU",
+            "sweep": false
+        }
+    },
+    "data_loader": {
+        "type": "CatboostDataLoader",
+        "args":{
+            "data_path": "/opt/ml/input/data/train/",
+            "train_data": "context_train_data.csv",
+            "valid_data": "context_valid_data.csv"
+        }
+    },
+    "trainer": {
+        "epochs": 100,
+
+        "save_dir": "saved/Catboost/",
+        "save_model_path": "model.pkl"
+    },
+    "test": {
+        "type": "CatboostDataset",
+        "args":{
+            "data_path": "/opt/ml/input/data/train/my_ease_500_20.csv",
+            "data_dir": "/opt/ml/input/data/train/",
+            "type": "test"
+        }
+    }
+}
