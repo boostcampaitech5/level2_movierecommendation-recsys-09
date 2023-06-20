@@ -105,11 +105,11 @@ data/
 input/
 saved/
 datasets/
+submission/
 output/
 catboost_info/
 wandb/
 output/
-
 
 # editor, os cache directory
 .vscode/

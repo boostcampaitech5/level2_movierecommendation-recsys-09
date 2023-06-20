@@ -553,4 +553,3 @@ class BERT4RecTrainer():
                     idx += 1
                     
         return result
-                    

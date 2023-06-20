@@ -97,5 +97,3 @@ if __name__ == '__main__':
         wandb.agent(sweep_id=sweep_id, function=functools.partial(main, config), count=1, entity='ffm')
     else: 
         main(config)
-
-
