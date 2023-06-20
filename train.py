@@ -3,6 +3,7 @@ import collections
 import torch
 import numpy as np
 import wandb
+import os
 import data_loader.data_loaders as module_data
 import model.loss as module_loss
 import model.metric as module_metric
@@ -14,7 +15,6 @@ from trainer import Trainer
 from utils import prepare_device
 import functools
 
-
 # fix random seeds for reproducibility
 SEED = 123
 torch.manual_seed(SEED)
@@ -23,7 +23,7 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 
-def update_config(config, modification):
+def wandb_sweep(config, modification):
     if modification is None:
         return config
 
@@ -43,11 +43,13 @@ def _get_by_path(tree, keys):
 
 
 def main(config):
-
-    wandb.init(project=config['name'], entity = "ffm", config=config['default'])
+    if config['wandb']:
+        wandb.login()
+        wandb.init(project=config['name'], entity = "ffm")
     
-    modification = wandb.config
-    update_config(config, modification)
+    if config['wandb_sweep']:    
+        modification = wandb.config
+        config = wandb_sweep(config, modification)
     
     logger = config.get_logger('train')
 
@@ -101,11 +103,13 @@ if __name__ == '__main__':
     ]
 
     config = ConfigParser.from_args(args, options)
-
-    sweep_id = wandb.sweep(
-        sweep=config['sweep_configuration'],
-        entity="ffm",
-        project=config['name']
-    )
     
-    wandb.agent(sweep_id=sweep_id, function=functools.partial(main, config), count=10)
+    if config['wandb_sweep']:
+        sweep_id = wandb.sweep(
+            sweep=config['sweep_configuration'],
+            entity="ffm",
+            project=config['name']
+        )
+        wandb.agent(sweep_id=sweep_id, function=functools.partial(main, config), count=10)
+    else:
+        main(config)

@@ -67,9 +67,10 @@ class Trainer(BaseTrainer):
         if self.do_validation:
             val_log = self._valid_epoch(epoch)
             log.update(**{'val_'+k : v for k, v in val_log.items()})
-            wandb.log({
-                'val_loss': val_log['loss']
-            })
+            if self.config['wandb']:
+                wandb.log({
+                    'val_loss': val_log['loss']
+                })
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
