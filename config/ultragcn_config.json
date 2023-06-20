@@ -1,5 +1,5 @@
 {   
-    "name": "movie_UltraGCN",
+    "name": "UltraGCN",
     "n_gpu": 1,
 
     "arch": {
