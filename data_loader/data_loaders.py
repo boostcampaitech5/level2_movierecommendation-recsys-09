@@ -379,3 +379,17 @@ class BERT4RecDataLoader(DataLoader):
     
     def return_data(self):
         return self.user_train, self.user_valid
+
+
+class EASEDataLoader():
+    def __init__(self, **args):
+        self.df = pd.read_csv(os.path.join(args['data_path'], "train_ratings.csv"))
+        self.user_enc = LabelEncoder()
+        self.item_enc = LabelEncoder()
+    
+    def generate_rating_matrix(self):
+        users = self.user_enc.fit_transform(self.df.loc[:, 'user'])
+        items = self.item_enc.fit_transform(self.df.loc[:, 'item'])
+        data = np.ones(self.df.shape[0])
+        
+        return sparse.csr_matrix((data, (users, items)))
