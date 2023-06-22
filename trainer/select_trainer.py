@@ -1,4 +1,4 @@
-from trainer import Trainer, AutoRecTrainer, Trainer_ML, MVAE_Trainer, BERT4RecTrainer
+from trainer import Trainer, AutoRecTrainer, Trainer_ML, MVAE_Trainer, BERT4RecTrainer, EASETrainer
 
 def select_trainer (model, criterion, metrics, optimizer, config, device, data_loader, valid_data_loader, lr_scheduler):
     if config['name'] == "AutoRec_eval":
@@ -17,6 +17,9 @@ def select_trainer (model, criterion, metrics, optimizer, config, device, data_l
     
     elif config['name'] == 'BERT4Rec':
         trainer = BERT4RecTrainer(model, config, data_loader, criterion, optimizer, lr_scheduler, device)
+    
+    elif config['name'] == 'EASE':
+        trainer = EASETrainer(config, data_loader)
         
     else:
         trainer = Trainer(model, criterion, metrics, optimizer,

@@ -39,16 +39,23 @@ def main(config):
     
     logger = config.get_logger('train')
     
-    # setup data_loader instances
-    data_loader = config.init_obj('data_loader', module_data)
-    valid_data_loader = data_loader.split_validation()
+    model = criterion = metrics = optimizer = device = valid_data_loader = lr_scheduler = None
     
-    # build model architecture, then print to console
-    model = config.init_obj('arch', module_arch)
-    logger.info(model)
+    
+    # setup data_loader instances
+    if config['name'] == 'EASE':
+        data_loader = config.init_obj('data_loader', module_data)
+    else:
+        data_loader = config.init_obj('data_loader', module_data)
+        valid_data_loader = data_loader.split_validation()
+    
+        # build model architecture, then print to console
+        model = config.init_obj('arch', module_arch)
+        logger.info(model)
+    
     
     # prepare for (multi-device) GPU training
-    if config['name'] != 'Catboost':
+    if config['name'] not in ['Catboost', 'EASE']:
         device, device_ids = prepare_device(config['n_gpu'])
         model = model.to(device)
         if len(device_ids) > 1:
@@ -62,6 +69,7 @@ def main(config):
         trainable_params = filter(lambda p: p.requires_grad, model.parameters())
         optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
         lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
+
 
     # prepare trainer and start train
     trainer = select_trainer(model, criterion, metrics, optimizer, 

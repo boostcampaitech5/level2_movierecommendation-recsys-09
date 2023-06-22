@@ -1,0 +1,22 @@
+{
+    "name": "EASE",
+    "wandb": false,
+    "wandb_sweep": false,
+
+    "data_loader": {
+        "type": "EASEDataLoader",
+        "args":{
+            "data_path": "/opt/ml/input/data/train/"
+        }
+    },
+    "trainer": {
+        "_lambda": 400,
+        "save_dir": "saved/EASE/"
+    },
+    "test": {
+        "model_dir": "saved/EASE/",
+        "data_dir":  "/opt/ml/input/data/train/",
+        "top_k": 10, 
+        "submission_dir": "submission/"
+    }
+}

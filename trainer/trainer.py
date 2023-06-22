@@ -11,6 +11,9 @@ from torch.optim import Adam
 import wandb
 from time import time
 from model.metric import ndcg_k, recall_at_k
+from sklearn.preprocessing import LabelEncoder
+import pickle
+
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
@@ -553,3 +556,28 @@ class BERT4RecTrainer():
                     idx += 1
                     
         return result
+    
+
+class EASETrainer:
+    def __init__(self, config, data_loader):
+        self.B = None
+        self.config = config
+        self.X = data_loader.generate_rating_matrix()
+        self._lambda = config['trainer']['_lambda']
+        self.user_enc = data_loader.user_enc
+        self.item_enc = data_loader.item_enc
+
+    def train(self):
+        G = self.X.T.dot(self.X).toarray() # G = X'X
+        diag_indices = list(range(G.shape[0]))
+        G[diag_indices, diag_indices] += self._lambda  # X'X + λI
+        P = np.linalg.inv(G)  # P = (X'X + λI)^(-1)
+
+        B = P / -np.diag(P)  # - P_{ij} / P_{jj} if i ≠ j
+        min_dim = min(B.shape)  
+        B[range(min_dim), range(min_dim)] = 0  # 대각행렬 원소만 0으로 만들어주기 위해
+        self.B = B
+        self.pred = self.X.dot(B)
+        
+        with open(os.path.join(self.config['trainer']['save_dir'], "model.pickle"), "wb") as f:
+            pickle.dump(self, f)
